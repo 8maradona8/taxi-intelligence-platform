@@ -1,10 +1,10 @@
 from functools import lru_cache
-
+from app.core.environments import Environment
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    environment: str = "development"
+    environment: Environment = Environment.DEVELOPMENT
 
     app_name: str = "Taxi Intelligence Platform"
 
