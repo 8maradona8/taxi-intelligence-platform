@@ -1,9 +1,10 @@
 from fastapi import FastAPI
+from app.core.settings import settings
 
 
 app = FastAPI(
-    title="Taxi Intelligence Platform",
-    version="0.1.0",
+    title=settings.app_name,
+    version=settings.app_version,
 )
 
 
