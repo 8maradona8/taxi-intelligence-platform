@@ -10,6 +10,7 @@ from app.domain.decision.city_decision_engine import CityDecisionEngine
 from app.domain.decision.opportunity import Opportunity
 from app.domain.decision.opportunity_engine import OpportunityEngine
 from app.domain.decision.recommendation_engine import RecommendationEngine
+from app.domain.decision.city_snapshot import CitySnapshot
 
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "Opportunity",
     "OpportunityEngine",
     "RecommendationEngine",
+    "CitySnapshot",
 ]
