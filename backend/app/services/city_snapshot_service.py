@@ -10,11 +10,17 @@ from app.domain.pipelines import SignalPipeline
 
 
 class CitySnapshotService:
-    def __init__(self) -> None:
-        self.signal_pipeline = SignalPipeline()
-        self.city_decision_engine = CityDecisionEngine()
-        self.opportunity_engine = OpportunityEngine()
-        self.recommendation_engine = RecommendationEngine()
+    def __init__(
+        self,
+        signal_pipeline: SignalPipeline,
+        city_decision_engine: CityDecisionEngine,
+        opportunity_engine: OpportunityEngine,
+        recommendation_engine: RecommendationEngine,
+    ) -> None:
+        self.signal_pipeline = signal_pipeline
+        self.city_decision_engine = city_decision_engine
+        self.opportunity_engine = opportunity_engine
+        self.recommendation_engine = recommendation_engine
 
     def create_snapshot(
         self,

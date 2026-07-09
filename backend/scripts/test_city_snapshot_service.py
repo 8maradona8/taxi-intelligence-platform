@@ -1,8 +1,14 @@
 from datetime import timedelta
 
+from app.domain.decision import (
+    CityDecisionEngine,
+    OpportunityEngine,
+    RecommendationEngine,
+)
 from app.domain.enums import PriorityLevel, SignalSource, SignalType
 from app.domain.events import SignalEvent
 from app.domain.geography import City, Coordinates, Zone
+from app.domain.pipelines import SignalPipeline
 from app.domain.value_objects import Confidence, ImpactScore
 from app.services.city_snapshot_service import CitySnapshotService
 
@@ -69,7 +75,14 @@ signals = [
     ),
 ]
 
-snapshot = CitySnapshotService().create_snapshot(
+snapshot_service = CitySnapshotService(
+    signal_pipeline=SignalPipeline(),
+    city_decision_engine=CityDecisionEngine(),
+    opportunity_engine=OpportunityEngine(),
+    recommendation_engine=RecommendationEngine(),
+)
+
+snapshot = snapshot_service.create_snapshot(
     city=city,
     signals=signals,
 )
