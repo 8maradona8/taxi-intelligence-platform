@@ -1,34 +1,59 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+
 from app.core.logging import logger, setup_logging
 from app.core.settings import settings
-
+from app.database.health import check_database
 
 setup_logging()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("=" * 60)
+    logger.info("Starting Taxi Intelligence Platform")
+    logger.info("=" * 60)
+
+    database_ok = await check_database()
+
+    if database_ok:
+        logger.info("✓ PostgreSQL connection established")
+    else:
+        logger.error("✗ PostgreSQL connection failed")
+
+    logger.info("Backend is ready.")
+
+    yield
+
+    logger.info("=" * 60)
+    logger.info("Stopping Taxi Intelligence Platform")
+    logger.info("=" * 60)
 
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    )
+    lifespan=lifespan,
+)
+
 
 @app.get("/")
-async def root() -> dict[str, str]:
+async def root():
     return {
-        "status": "online",
-        "service": "TIP Backend",
-    }
-
-@app.get("/health")
-def health_check():
-    logger.info("health_check_called")
-
-    return {
-        "status": "healthy",
+        "service": settings.app_name,
+        "version": settings.app_version,
         "environment": settings.environment,
+        "status": "running",
     }
 
+
 @app.get("/health")
-async def health() -> dict[str, str]:
+async def health():
+    database_ok = await check_database()
+
     return {
-        "status": "healthy",
+        "status": "healthy" if database_ok else "unhealthy",
+        "database": database_ok,
+        "environment": settings.environment,
     }
