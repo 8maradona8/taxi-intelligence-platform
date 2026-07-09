@@ -42,3 +42,17 @@ class Zone:
             signal.confidence.value
             for signal in active_signals
         ) / len(active_signals)
+
+    def demand_score(self):
+        from app.domain.decision import DemandScore
+
+        reasons = [
+            f"{signal.source.value}:{signal.signal_type.value} impact={signal.impact_score.value}"
+            for signal in self.active_signals()
+        ]
+
+        return DemandScore.from_zone_metrics(
+            total_impact=self.total_impact_score(),
+            average_confidence=self.average_confidence(),
+            reasons=reasons,
+        )
