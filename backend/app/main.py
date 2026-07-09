@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-
+from app.api.v1.recommendation import router as recommendation_router
+from app.api.v1.opportunities import router as opportunities_router
 from app.api.v1.snapshot import router as snapshot_router
 from app.core.logging import logger, setup_logging
 from app.core.settings import settings
@@ -43,6 +44,15 @@ app.include_router(
     prefix="/api/v1",
 )
 
+app.include_router(
+    opportunities_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    recommendation_router,
+    prefix="/api/v1",
+)
 
 @app.get("/")
 async def root():

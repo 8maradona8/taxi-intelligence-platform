@@ -14,8 +14,8 @@ router = APIRouter(
 )
 
 
-@router.get("/{city_name}/snapshot")
-async def get_city_snapshot(
+@router.get("/{city_name}/recommendation")
+async def get_city_recommendation(
     city_name: str,
     handler: GetCitySnapshotHandler = Depends(get_snapshot_handler),
 ):
@@ -27,4 +27,10 @@ async def get_city_snapshot(
 
     response = CitySnapshotResponse.from_domain(snapshot)
 
-    return asdict(response)
+    if response.best_recommendation is None:
+        return {
+            "recommendation": None,
+            "message": "No recommendation available",
+        }
+
+    return asdict(response.best_recommendation)
