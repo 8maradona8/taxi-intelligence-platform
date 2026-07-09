@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.v1.snapshot import router as snapshot_router
 from app.core.logging import logger, setup_logging
 from app.core.settings import settings
 from app.database.health import check_database
@@ -35,6 +36,11 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     lifespan=lifespan,
+)
+
+app.include_router(
+    snapshot_router,
+    prefix="/api/v1",
 )
 
 
