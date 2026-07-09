@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 
 class BaseCollector(ABC):
@@ -12,37 +13,29 @@ class BaseCollector(ABC):
     """
 
     @abstractmethod
-    async def collect(self):
+    async def collect(self) -> Any:
         """
         Fetch raw data from external source.
         """
-        pass
 
     @abstractmethod
-    async def process(self, data):
+    async def process(self, data: Any) -> Any:
         """
         Transform raw data into domain objects.
         """
-        pass
 
     @abstractmethod
-    async def save(self, data):
+    async def save(self, data: Any) -> Any:
         """
         Persist processed data.
         """
-        pass
 
-    async def run(self):
+    async def run(self) -> Any:
         """
-        Standard collector pipeline.
+        Standard collector execution pipeline.
         """
 
         raw_data = await self.collect()
+        processed_data = await self.process(raw_data)
 
-        processed_data = await self.process(
-            raw_data
-        )
-
-        await self.save(
-            processed_data
-        )
+        return await self.save(processed_data)

@@ -1,4 +1,8 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.signal import Signal
 from app.modules.common.base_collector import BaseCollector
+from app.services.airport_service import AirportService
 
 
 class AirportCollector(BaseCollector):
@@ -6,7 +10,10 @@ class AirportCollector(BaseCollector):
     Collector responsible for airport intelligence data.
     """
 
-    async def collect(self):
+    def __init__(self, session: AsyncSession) -> None:
+        self.airport_service = AirportService(session)
+
+    async def collect(self) -> dict:
         """
         Fetch raw airport data.
 
@@ -19,31 +26,28 @@ class AirportCollector(BaseCollector):
 
         return {
             "airport": "SOF",
-            "arrivals": [],
-            "departures": [],
+            "arrivals": 3,
+            "departures": 1,
         }
 
-    async def process(self, data):
+    async def process(self, data: dict) -> dict:
         """
-        Transform airport data into TIP signals.
+        Transform raw airport data into service input.
         """
 
         return {
-            "type": "airport_activity",
-            "airport": data["airport"],
-            "arrivals": len(data["arrivals"]),
-            "departures": len(data["departures"]),
+            "airport_code": data["airport"],
+            "arrivals": data["arrivals"],
+            "departures": data["departures"],
         }
 
-    async def save(self, data):
+    async def save(self, data: dict) -> Signal:
         """
-        Temporary persistence placeholder.
-
-        Later:
-        Repository -> PostgreSQL
+        Persist airport activity as a TIP signal.
         """
 
-        print(
-            "Airport signal:",
-            data
+        return await self.airport_service.create_airport_activity_signal(
+            airport_code=data["airport_code"],
+            arrivals=data["arrivals"],
+            departures=data["departures"],
         )
