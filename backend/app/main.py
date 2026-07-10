@@ -9,6 +9,7 @@ from app.core.settings import settings
 from app.database.health import check_database
 from app.api.v1.system import router as system_router
 from app.shared.errors import register_exception_handlers
+from app.api.middleware import RequestLoggingMiddleware
 
 
 setup_logging()
@@ -41,6 +42,7 @@ app = FastAPI(
     version=settings.app_version,
     lifespan=lifespan,
 )
+app.add_middleware(RequestLoggingMiddleware)
 
 register_exception_handlers(app)
 
