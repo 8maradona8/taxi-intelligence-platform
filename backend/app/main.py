@@ -7,6 +7,9 @@ from app.api.v1.snapshot import router as snapshot_router
 from app.core.logging import logger, setup_logging
 from app.core.settings import settings
 from app.database.health import check_database
+from app.api.v1.system import router as system_router
+
+
 
 setup_logging()
 
@@ -51,6 +54,10 @@ app.include_router(
 
 app.include_router(
     recommendation_router,
+    prefix="/api/v1",
+)
+app.include_router(
+    system_router,
     prefix="/api/v1",
 )
 
