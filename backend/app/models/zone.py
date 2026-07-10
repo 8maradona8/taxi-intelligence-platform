@@ -14,7 +14,9 @@ class Zone(Base, TimestampMixin):
 
     city: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
 
-    country: Mapped[str] = mapped_column(String(100), nullable=False, default="Bulgaria")
+    country: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="Bulgaria"
+    )
 
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
 

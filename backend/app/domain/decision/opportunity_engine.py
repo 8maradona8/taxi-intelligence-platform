@@ -16,10 +16,7 @@ class OpportunityEngine:
         )
 
     def rank(self, decisions: list[Decision]) -> list[Opportunity]:
-        opportunities = [
-            self.calculate(decision)
-            for decision in decisions
-        ]
+        opportunities = [self.calculate(decision) for decision in decisions]
 
         return sorted(
             opportunities,

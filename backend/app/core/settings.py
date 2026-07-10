@@ -25,9 +25,9 @@ class Settings(BaseSettings):
     events_api_key: str | None = None
 
     model_config = SettingsConfigDict(
-    env_file="../.env",
-    case_sensitive=False,
-    extra="ignore",
+        env_file="../.env",
+        case_sensitive=False,
+        extra="ignore",
     )
 
 

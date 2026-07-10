@@ -27,7 +27,4 @@ async def get_city_opportunities(
 
     response = CitySnapshotResponse.from_domain(snapshot)
 
-    return [
-        asdict(opportunity)
-        for opportunity in response.opportunities
-    ]
+    return [asdict(opportunity) for opportunity in response.opportunities]

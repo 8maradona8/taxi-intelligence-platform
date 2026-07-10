@@ -11,23 +11,15 @@ async def check_database() -> bool:
 
     try:
         async with engine.connect() as connection:
-
-            result = await connection.execute(
-                text("SELECT version();")
-            )
+            result = await connection.execute(text("SELECT version();"))
 
             version = result.scalar_one()
 
-            logger.info(
-                f"Connected to PostgreSQL: {version}"
-            )
+            logger.info(f"Connected to PostgreSQL: {version}")
 
             return True
 
     except Exception:
-
-        logger.exception(
-            "Unable to connect to PostgreSQL."
-        )
+        logger.exception("Unable to connect to PostgreSQL.")
 
         return False

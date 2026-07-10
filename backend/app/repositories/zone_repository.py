@@ -9,9 +9,7 @@ class ZoneRepository:
         self.session = session
 
     async def get_by_name(self, name: str) -> Zone | None:
-        result = await self.session.execute(
-            select(Zone).where(Zone.name == name)
-        )
+        result = await self.session.execute(select(Zone).where(Zone.name == name))
 
         return result.scalar_one_or_none()
 

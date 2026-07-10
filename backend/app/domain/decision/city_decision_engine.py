@@ -14,8 +14,6 @@ class CityDecisionEngine:
             if not zone.active_signals():
                 continue
 
-            decisions.append(
-                self.decision_engine.evaluate_zone(zone)
-            )
+            decisions.append(self.decision_engine.evaluate_zone(zone))
 
         return decisions

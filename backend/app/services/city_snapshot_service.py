@@ -35,9 +35,7 @@ class CitySnapshotService:
 
         decisions = self.city_decision_engine.evaluate_city(city)
         opportunities = self.opportunity_engine.rank(decisions)
-        best_recommendation = self.recommendation_engine.recommend_best(
-            opportunities
-        )
+        best_recommendation = self.recommendation_engine.recommend_best(opportunities)
 
         return CitySnapshot.create(
             city_name=city.name,

@@ -20,17 +20,10 @@ class Zone:
         self.signals.append(signal)
 
     def active_signals(self) -> list[SignalEvent]:
-        return [
-            signal
-            for signal in self.signals
-            if not signal.is_expired
-        ]
+        return [signal for signal in self.signals if not signal.is_expired]
 
     def total_impact_score(self) -> float:
-        return sum(
-            signal.impact_score.value
-            for signal in self.active_signals()
-        )
+        return sum(signal.impact_score.value for signal in self.active_signals())
 
     def average_confidence(self) -> float:
         active_signals = self.active_signals()
@@ -38,10 +31,9 @@ class Zone:
         if not active_signals:
             return 0.0
 
-        return sum(
-            signal.confidence.value
-            for signal in active_signals
-        ) / len(active_signals)
+        return sum(signal.confidence.value for signal in active_signals) / len(
+            active_signals
+        )
 
     def demand_score(self):
         from app.domain.decision import DemandScore

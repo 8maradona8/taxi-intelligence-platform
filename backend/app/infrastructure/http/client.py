@@ -126,8 +126,7 @@ class AsyncHttpClient:
                     continue
 
                 raise HttpTimeoutError(
-                    f"Request to {exc.request.url} timed out "
-                    f"after {attempts} attempts"
+                    f"Request to {exc.request.url} timed out after {attempts} attempts"
                 ) from exc
 
             except httpx.HTTPStatusError as exc:
@@ -151,9 +150,7 @@ class AsyncHttpClient:
                     f"after {attempts} attempts: {exc}"
                 ) from exc
 
-        raise HttpRequestError(
-            f"Request to {url} failed unexpectedly"
-        )
+        raise HttpRequestError(f"Request to {url} failed unexpectedly")
 
     async def _wait_before_retry(
         self,
