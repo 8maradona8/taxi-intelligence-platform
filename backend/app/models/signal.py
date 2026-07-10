@@ -6,6 +6,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 from app.models.base import TimestampMixin
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from app.models.zone import Zone
 
 
 class Signal(Base, TimestampMixin):

@@ -22,3 +22,12 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.15.20",
 ]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
