@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -34,7 +35,9 @@ def register_exception_handlers(app: FastAPI) -> None:
 
         logger.warning(
             "External service timeout: "
-            f"request_id={request_id} path={request.url.path} error={exc}"
+            f"request_id={request_id} "
+            f"path={request.url.path} "
+            f"error={exc}"
         )
 
         error = ApiError.create(
@@ -89,7 +92,9 @@ def register_exception_handlers(app: FastAPI) -> None:
 
         logger.warning(
             "External service request failed: "
-            f"request_id={request_id} path={request.url.path} error={exc}"
+            f"request_id={request_id} "
+            f"path={request.url.path} "
+            f"error={exc}"
         )
 
         error = ApiError.create(
@@ -104,6 +109,41 @@ def register_exception_handlers(app: FastAPI) -> None:
             content=error.to_dict(),
         )
 
+    @app.exception_handler(RequestValidationError)
+    async def handle_request_validation_error(
+        request: Request,
+        exc: RequestValidationError,
+    ) -> JSONResponse:
+        request_id = _get_request_id(request)
+
+        validation_details = [
+            {
+                "location": ".".join(str(part) for part in validation_error["loc"]),
+                "message": validation_error["msg"],
+                "type": validation_error["type"],
+            }
+            for validation_error in exc.errors()
+        ]
+
+        logger.warning(
+            "Request validation failed: "
+            f"request_id={request_id} "
+            f"path={request.url.path} "
+            f"errors={validation_details}"
+        )
+
+        error = ApiError.create(
+            code=ErrorCode.VALIDATION_ERROR,
+            message="Request validation failed.",
+            details=validation_details,
+            request_id=request_id,
+        )
+
+        return JSONResponse(
+            status_code=422,
+            content=error.to_dict(),
+        )
+
     @app.exception_handler(StarletteHTTPException)
     async def handle_http_exception(
         request: Request,
@@ -111,11 +151,12 @@ def register_exception_handlers(app: FastAPI) -> None:
     ) -> JSONResponse:
         request_id = _get_request_id(request)
 
-        error_code = (
-            ErrorCode.NOT_FOUND
-            if exc.status_code == 404
-            else ErrorCode.INTERNAL_SERVER_ERROR
-        )
+        if exc.status_code == 404:
+            error_code = ErrorCode.NOT_FOUND
+        elif exc.status_code == 422:
+            error_code = ErrorCode.VALIDATION_ERROR
+        else:
+            error_code = ErrorCode.INTERNAL_SERVER_ERROR
 
         error = ApiError.create(
             code=error_code,
@@ -137,7 +178,8 @@ def register_exception_handlers(app: FastAPI) -> None:
 
         logger.exception(
             "Unhandled application error: "
-            f"request_id={request_id} path={request.url.path}"
+            f"request_id={request_id} "
+            f"path={request.url.path}"
         )
 
         error = ApiError.create(
