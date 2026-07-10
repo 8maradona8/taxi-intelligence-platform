@@ -8,7 +8,7 @@ from app.core.logging import logger, setup_logging
 from app.core.settings import settings
 from app.database.health import check_database
 from app.api.v1.system import router as system_router
-
+from app.shared.errors import register_exception_handlers
 
 
 setup_logging()
@@ -42,6 +42,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+register_exception_handlers(app)
+
 app.include_router(
     snapshot_router,
     prefix="/api/v1",
@@ -60,6 +62,7 @@ app.include_router(
     system_router,
     prefix="/api/v1",
 )
+
 
 @app.get("/")
 async def root():
