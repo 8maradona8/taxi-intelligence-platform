@@ -79,10 +79,13 @@ class SofiaAirportFlightParser:
 
         status_text = self._clean(flight_data.get("st_en")).lower()
 
-        status = self.STATUS_MAP.get(
-            status_text,
-            FlightStatus.UNKNOWN,
-        )
+        if not status_text:
+            status = FlightStatus.SCHEDULED
+        else:
+            status = self.STATUS_MAP.get(
+                status_text,
+                FlightStatus.UNKNOWN,
+            )
 
         operational_time = self._clean(flight_data.get("est"))
 
