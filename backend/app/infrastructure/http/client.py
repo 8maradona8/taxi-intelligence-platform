@@ -64,6 +64,43 @@ class AsyncHttpClient:
         params: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
     ) -> Any:
+        response = await self._get(
+            url,
+            params=params,
+            headers=headers,
+        )
+
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise HttpResponseError(
+                status_code=response.status_code,
+                message="Response body is not valid JSON",
+                url=str(response.url),
+            ) from exc
+
+    async def get_text(
+        self,
+        url: str,
+        *,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> str:
+        response = await self._get(
+            url,
+            params=params,
+            headers=headers,
+        )
+
+        return response.text
+
+    async def _get(
+        self,
+        url: str,
+        *,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> httpx.Response:
         attempts = self.max_retries + 1
 
         for attempt in range(1, attempts + 1):
@@ -106,27 +143,21 @@ class AsyncHttpClient:
                     continue
 
                 response.raise_for_status()
-
-                try:
-                    return response.json()
-                except ValueError as exc:
-                    raise HttpResponseError(
-                        status_code=response.status_code,
-                        message="Response body is not valid JSON",
-                        url=str(response.url),
-                    ) from exc
+                return response
 
             except httpx.TimeoutException as exc:
+                request_url = self._request_url(exc, fallback=url)
+
                 if attempt < attempts:
                     await self._wait_before_retry(
                         attempt=attempt,
                         reason=exc.__class__.__name__,
-                        url=str(exc.request.url),
+                        url=request_url,
                     )
                     continue
 
                 raise HttpTimeoutError(
-                    f"Request to {exc.request.url} timed out after {attempts} attempts"
+                    f"Request to {request_url} timed out after {attempts} attempts"
                 ) from exc
 
             except httpx.HTTPStatusError as exc:
@@ -137,17 +168,18 @@ class AsyncHttpClient:
                 ) from exc
 
             except httpx.RequestError as exc:
+                request_url = self._request_url(exc, fallback=url)
+
                 if attempt < attempts:
                     await self._wait_before_retry(
                         attempt=attempt,
                         reason=exc.__class__.__name__,
-                        url=str(exc.request.url),
+                        url=request_url,
                     )
                     continue
 
                 raise HttpRequestError(
-                    f"Request to {exc.request.url} failed "
-                    f"after {attempts} attempts: {exc}"
+                    f"Request to {request_url} failed after {attempts} attempts: {exc}"
                 ) from exc
 
         raise HttpRequestError(f"Request to {url} failed unexpectedly")
@@ -169,6 +201,19 @@ class AsyncHttpClient:
         )
 
         await asyncio.sleep(delay)
+
+    @staticmethod
+    def _request_url(
+        exc: httpx.RequestError,
+        *,
+        fallback: str,
+    ) -> str:
+        request = getattr(exc, "request", None)
+
+        if request is None:
+            return fallback
+
+        return str(request.url)
 
     @staticmethod
     def _response_message(response: httpx.Response) -> str:
