@@ -7,6 +7,10 @@ from app.application.dto.airport_signal_history_response import (
     AirportSignalHistoryItemResponse,
     AirportSignalHistoryResponse,
 )
+from app.application.dto.scheduler_status_response import (
+    SchedulerStatusResponse,
+)
+
 
 __all__ = [
     "CitySnapshotResponse",
@@ -14,4 +18,5 @@ __all__ = [
     "RecommendationResponse",
     "AirportSignalHistoryItemResponse",
     "AirportSignalHistoryResponse",
+    "SchedulerStatusResponse",
 ]

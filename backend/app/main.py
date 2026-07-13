@@ -36,6 +36,7 @@ async def lifespan(app: FastAPI):
         logger.error("✗ PostgreSQL connection failed")
 
     airport_scheduler: AirportScheduler | None = None
+    app.state.airport_scheduler = None
 
     if settings.airport_scheduler_enabled and database_ok:
         airport_scheduler = AirportScheduler(
@@ -45,6 +46,7 @@ async def lifespan(app: FastAPI):
         )
 
         await airport_scheduler.start()
+        app.state.airport_scheduler = airport_scheduler
     elif not settings.airport_scheduler_enabled:
         logger.info("Airport scheduler is disabled")
     else:
@@ -59,6 +61,8 @@ async def lifespan(app: FastAPI):
     finally:
         if airport_scheduler is not None:
             await airport_scheduler.stop()
+
+        app.state.airport_scheduler = None
 
         logger.info("=" * 60)
         logger.info("Stopping Taxi Intelligence Platform")
