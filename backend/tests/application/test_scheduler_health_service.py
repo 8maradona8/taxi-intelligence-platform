@@ -14,6 +14,7 @@ def make_status(
     last_success_at: datetime | None = None,
     last_failure_at: datetime | None = None,
     last_error: str | None = None,
+    recovering: bool = False,
 ) -> AirportSchedulerStatus:
     return AirportSchedulerStatus(
         name="airport-signal-scheduler",
@@ -32,7 +33,36 @@ def make_status(
         runs_total=3,
         successes_total=2,
         failures_total=1,
+        recovering=recovering,
     )
+
+
+def test_recovering_scheduler_is_reported_as_recovering() -> None:
+    now = datetime(
+        2026,
+        7,
+        13,
+        14,
+        0,
+        tzinfo=UTC,
+    )
+
+    completed_at = now - timedelta(minutes=2)
+
+    health = SchedulerHealthService().evaluate(
+        enabled=True,
+        scheduler_status=make_status(
+            now=now,
+            last_completed_at=completed_at,
+            last_success_at=completed_at,
+            recovering=True,
+        ),
+        now=now,
+    )
+
+    assert health.status == "recovering"
+    assert health.running is True
+    assert health.stale is False
 
 
 def test_disabled_scheduler_is_reported_as_disabled() -> None:

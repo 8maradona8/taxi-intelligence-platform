@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     airport_scheduler_interval_seconds: int = 300
     airport_scheduler_run_on_startup: bool = True
 
+    airport_scheduler_max_attempts: int = 2
+    airport_scheduler_retry_backoff_seconds: float = 2.0
+
     model_config = SettingsConfigDict(
         env_file="../.env",
         case_sensitive=False,

@@ -5,11 +5,9 @@ from fastapi import APIRouter, Depends
 from app.api.dependencies import get_airport_scheduler
 from app.application.dto import (
     DatabaseHealthResponse,
+    SchedulerHealthResponse,
     SchedulerStatusResponse,
     SystemHealthResponse,
-)
-from app.application.dto.system_health_response import (
-    SchedulerHealthResponse,
 )
 from app.core.settings import settings
 from app.database.health import check_database
@@ -43,8 +41,13 @@ async def system_health(
     elif scheduler_health.status in {
         "unhealthy",
         "degraded",
+        "recovering",
     }:
-        overall_status = scheduler_health.status
+        overall_status = (
+            "degraded"
+            if scheduler_health.status == "recovering"
+            else scheduler_health.status
+        )
     else:
         overall_status = "healthy"
 
@@ -72,6 +75,8 @@ async def airport_scheduler_status(
             enabled=settings.airport_scheduler_enabled,
             interval_seconds=(settings.airport_scheduler_interval_seconds),
             run_on_startup=(settings.airport_scheduler_run_on_startup),
+            max_attempts=(settings.airport_scheduler_max_attempts),
+            retry_backoff_seconds=(settings.airport_scheduler_retry_backoff_seconds),
         )
     else:
         response = SchedulerStatusResponse.from_status(scheduler.status)

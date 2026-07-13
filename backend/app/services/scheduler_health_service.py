@@ -77,6 +77,13 @@ class SchedulerHealthService:
                 stale=False,
                 message="Airport scheduler is waiting for its first completed run.",
             )
+        if scheduler_status.recovering:
+            return self._from_status(
+                scheduler_status,
+                status="recovering",
+                stale=False,
+                message=("Airport scheduler is recovering from a temporary failure."),
+            )
 
         stale_after = timedelta(
             seconds=max(

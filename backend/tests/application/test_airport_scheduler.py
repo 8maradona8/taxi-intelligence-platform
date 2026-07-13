@@ -11,6 +11,142 @@ from app.domain.enums import (
 from app.domain.events import SignalEvent
 from app.domain.value_objects import Confidence, ImpactScore
 from app.schedulers import AirportScheduler
+from app.infrastructure.http import (
+    HttpResponseError,
+    HttpTimeoutError,
+)
+
+
+@pytest.mark.anyio
+async def test_scheduler_recovers_after_timeout() -> None:
+    calls = 0
+
+    async def temporary_failure_job() -> SignalEvent:
+        nonlocal calls
+        calls += 1
+
+        if calls == 1:
+            raise HttpTimeoutError("Temporary airport timeout")
+
+        return make_signal()
+
+    scheduler = AirportScheduler(
+        job=temporary_failure_job,
+        interval_seconds=300,
+        run_on_startup=False,
+        max_attempts=2,
+        retry_backoff_seconds=0,
+    )
+
+    signal = await scheduler.run_once()
+
+    assert signal is not None
+    assert calls == 2
+
+    status = scheduler.status
+
+    assert status.runs_total == 1
+    assert status.successes_total == 1
+    assert status.failures_total == 0
+    assert status.retry_attempts_total == 1
+    assert status.recovering is False
+    assert status.last_error is None
+
+
+@pytest.mark.anyio
+async def test_scheduler_does_not_retry_programming_error() -> None:
+    calls = 0
+
+    async def programming_failure_job() -> SignalEvent:
+        nonlocal calls
+        calls += 1
+
+        raise ValueError("Broken mapper configuration")
+
+    scheduler = AirportScheduler(
+        job=programming_failure_job,
+        interval_seconds=300,
+        run_on_startup=False,
+        max_attempts=3,
+        retry_backoff_seconds=0,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Broken mapper configuration",
+    ):
+        await scheduler.run_once()
+
+    assert calls == 1
+
+    status = scheduler.status
+
+    assert status.failures_total == 1
+    assert status.retry_attempts_total == 0
+
+
+@pytest.mark.anyio
+async def test_scheduler_does_not_retry_permanent_http_error() -> None:
+    calls = 0
+
+    async def permanent_failure_job() -> SignalEvent:
+        nonlocal calls
+        calls += 1
+
+        raise HttpResponseError(
+            status_code=404,
+            message="Not Found",
+        )
+
+    scheduler = AirportScheduler(
+        job=permanent_failure_job,
+        interval_seconds=300,
+        run_on_startup=False,
+        max_attempts=3,
+        retry_backoff_seconds=0,
+    )
+
+    with pytest.raises(HttpResponseError):
+        await scheduler.run_once()
+
+    assert calls == 1
+    assert scheduler.status.retry_attempts_total == 0
+
+
+@pytest.mark.anyio
+async def test_scheduler_skips_overlapping_run() -> None:
+    job_started = asyncio.Event()
+    allow_completion = asyncio.Event()
+
+    async def slow_job() -> SignalEvent:
+        job_started.set()
+        await allow_completion.wait()
+
+        return make_signal()
+
+    scheduler = AirportScheduler(
+        job=slow_job,
+        interval_seconds=300,
+        run_on_startup=False,
+    )
+
+    first_run = asyncio.create_task(scheduler.run_once())
+
+    await asyncio.wait_for(
+        job_started.wait(),
+        timeout=1.0,
+    )
+
+    second_result = await scheduler.run_once()
+
+    assert second_result is None
+    assert scheduler.status.overlap_skips_total == 1
+
+    allow_completion.set()
+    first_result = await first_run
+
+    assert first_result is not None
+    assert scheduler.status.successes_total == 1
 
 
 def make_signal() -> SignalEvent:

@@ -24,6 +24,12 @@ class SchedulerStatusResponse:
     runs_total: int
     successes_total: int
     failures_total: int
+    recovering: bool
+    max_attempts: int
+    current_attempt: int | None
+    retry_backoff_seconds: float
+    retry_attempts_total: int
+    overlap_skips_total: int
 
     @classmethod
     def from_status(
@@ -49,6 +55,12 @@ class SchedulerStatusResponse:
             runs_total=status.runs_total,
             successes_total=status.successes_total,
             failures_total=status.failures_total,
+            recovering=status.recovering,
+            max_attempts=status.max_attempts,
+            current_attempt=status.current_attempt,
+            retry_backoff_seconds=status.retry_backoff_seconds,
+            retry_attempts_total=status.retry_attempts_total,
+            overlap_skips_total=status.overlap_skips_total,
         )
 
     @classmethod
@@ -58,6 +70,8 @@ class SchedulerStatusResponse:
         enabled: bool,
         interval_seconds: float,
         run_on_startup: bool,
+        max_attempts: int,
+        retry_backoff_seconds: float,
     ) -> "SchedulerStatusResponse":
         return cls(
             name="airport-signal-scheduler",
@@ -78,4 +92,10 @@ class SchedulerStatusResponse:
             runs_total=0,
             successes_total=0,
             failures_total=0,
+            recovering=False,
+            max_attempts=max_attempts,
+            current_attempt=None,
+            retry_backoff_seconds=retry_backoff_seconds,
+            retry_attempts_total=0,
+            overlap_skips_total=0,
         )

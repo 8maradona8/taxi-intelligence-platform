@@ -19,6 +19,7 @@ from app.schedulers import (
 )
 from app.shared.errors import register_exception_handlers
 
+
 setup_logging()
 
 
@@ -43,12 +44,16 @@ async def lifespan(app: FastAPI):
             job=collect_and_persist_airport_signal,
             interval_seconds=(settings.airport_scheduler_interval_seconds),
             run_on_startup=(settings.airport_scheduler_run_on_startup),
+            max_attempts=(settings.airport_scheduler_max_attempts),
+            retry_backoff_seconds=(settings.airport_scheduler_retry_backoff_seconds),
         )
 
         await airport_scheduler.start()
         app.state.airport_scheduler = airport_scheduler
+
     elif not settings.airport_scheduler_enabled:
         logger.info("Airport scheduler is disabled")
+
     else:
         logger.warning(
             "Airport scheduler was not started because PostgreSQL is unavailable"
@@ -110,7 +115,7 @@ async def root():
     return {
         "service": settings.app_name,
         "version": settings.app_version,
-        "environment": settings.environment,
+        "environment": settings.environment.value,
         "status": "running",
     }
 
@@ -122,5 +127,5 @@ async def health():
     return {
         "status": ("healthy" if database_ok else "unhealthy"),
         "database": database_ok,
-        "environment": settings.environment,
+        "environment": settings.environment.value,
     }
