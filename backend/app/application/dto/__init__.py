@@ -10,7 +10,11 @@ from app.application.dto.airport_signal_history_response import (
 from app.application.dto.scheduler_status_response import (
     SchedulerStatusResponse,
 )
-
+from app.application.dto.system_health_response import (
+    DatabaseHealthResponse,
+    SchedulerHealthResponse,
+    SystemHealthResponse,
+)
 
 __all__ = [
     "CitySnapshotResponse",
@@ -19,4 +23,7 @@ __all__ = [
     "AirportSignalHistoryItemResponse",
     "AirportSignalHistoryResponse",
     "SchedulerStatusResponse",
+    "DatabaseHealthResponse",
+    "SchedulerHealthResponse",
+    "SystemHealthResponse",
 ]
