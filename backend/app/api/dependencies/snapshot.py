@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator
 
 from app.application.handlers import GetCitySnapshotHandler
+from app.database.session import AsyncSessionLocal
 from app.domain.decision import (
     CityDecisionEngine,
     OpportunityEngine,
@@ -13,6 +14,10 @@ from app.infrastructure.http import AsyncHttpClient
 from app.infrastructure.mappers import (
     AirportSignalMapper,
     SofiaAirportFlightParser,
+)
+from app.repositories import SignalRepository, ZoneRepository
+from app.services.airport_signal_persistence_service import (
+    AirportSignalPersistenceService,
 )
 from app.services.airport_signal_service import AirportSignalService
 from app.services.city_snapshot_service import CitySnapshotService
@@ -27,8 +32,7 @@ async def get_snapshot_handler() -> AsyncIterator[GetCitySnapshotHandler]:
         default_headers={
             "Accept": "text/html,application/xhtml+xml",
             "User-Agent": (
-                "Taxi-Intelligence-Platform/0.1.0 "
-                "(public flight data reader)"
+                "Taxi-Intelligence-Platform/0.1.0 (public flight data reader)"
             ),
         },
     ) as http_client:
@@ -41,19 +45,26 @@ async def get_snapshot_handler() -> AsyncIterator[GetCitySnapshotHandler]:
             parser=SofiaAirportFlightParser(),
         )
 
-        airport_signal_service = AirportSignalService(
-            collector=airport_collector,
-            signal_mapper=AirportSignalMapper(),
-        )
+        async with AsyncSessionLocal() as session:
+            persistence_service = AirportSignalPersistenceService(
+                zone_repository=ZoneRepository(session),
+                signal_repository=SignalRepository(session),
+            )
 
-        snapshot_service = CitySnapshotService(
-            signal_pipeline=SignalPipeline(),
-            city_decision_engine=CityDecisionEngine(),
-            opportunity_engine=OpportunityEngine(),
-            recommendation_engine=RecommendationEngine(),
-        )
+            airport_signal_service = AirportSignalService(
+                collector=airport_collector,
+                signal_mapper=AirportSignalMapper(),
+                persistence_service=persistence_service,
+            )
 
-        yield GetCitySnapshotHandler(
-            city_snapshot_service=snapshot_service,
-            airport_signal_service=airport_signal_service,
-        )
+            snapshot_service = CitySnapshotService(
+                signal_pipeline=SignalPipeline(),
+                city_decision_engine=CityDecisionEngine(),
+                opportunity_engine=OpportunityEngine(),
+                recommendation_engine=RecommendationEngine(),
+            )
+
+            yield GetCitySnapshotHandler(
+                city_snapshot_service=snapshot_service,
+                airport_signal_service=airport_signal_service,
+            )
