@@ -10,6 +10,9 @@ from app.database.health import check_database
 from app.api.v1.system import router as system_router
 from app.shared.errors import register_exception_handlers
 from app.api.middleware import RequestLoggingMiddleware
+from app.api.v1.airport_signals import (
+    router as airport_signals_router,
+)
 
 
 setup_logging()
@@ -45,6 +48,11 @@ app = FastAPI(
 app.add_middleware(RequestLoggingMiddleware)
 
 register_exception_handlers(app)
+
+app.include_router(
+    airport_signals_router,
+    prefix="/api/v1",
+)
 
 app.include_router(
     snapshot_router,

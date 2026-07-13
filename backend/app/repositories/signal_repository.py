@@ -33,6 +33,27 @@ class SignalRepository:
 
         return result.scalar_one_or_none()
 
+    async def list_latest(
+        self,
+        *,
+        signal_type: str,
+        source: str,
+        zone_id: int,
+        limit: int = 20,
+    ) -> list[Signal]:
+        result = await self.session.execute(
+            select(Signal)
+            .where(
+                Signal.signal_type == signal_type,
+                Signal.source == source,
+                Signal.zone_id == zone_id,
+            )
+            .order_by(Signal.observed_at.desc())
+            .limit(limit)
+        )
+
+        return list(result.scalars().all())
+
     async def create(
         self,
         *,
