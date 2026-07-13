@@ -1,15 +1,18 @@
+import pytest
+
 from app.application.handlers import GetCitySnapshotHandler
 from app.application.queries import GetCitySnapshotQuery
 
 
-def test_handler_returns_sofia_snapshot(
+@pytest.mark.anyio
+async def test_handler_returns_sofia_snapshot(
     snapshot_handler: GetCitySnapshotHandler,
 ) -> None:
     query = GetCitySnapshotQuery(
         city_name="Sofia",
     )
 
-    snapshot = snapshot_handler.handle(query)
+    snapshot = await snapshot_handler.handle(query)
 
     assert snapshot.city_name == "Sofia"
     assert snapshot.opportunity_count == 2

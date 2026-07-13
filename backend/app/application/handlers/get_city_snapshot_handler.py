@@ -6,29 +6,41 @@ from app.domain.enums import PriorityLevel, SignalSource, SignalType
 from app.domain.events import SignalEvent
 from app.domain.geography import City, Coordinates, Zone
 from app.domain.value_objects import Confidence, ImpactScore
+from app.services.airport_signal_service import AirportSignalService
 from app.services.city_snapshot_service import CitySnapshotService
 
 
 class GetCitySnapshotHandler:
     def __init__(
         self,
+        *,
         city_snapshot_service: CitySnapshotService,
+        airport_signal_service: AirportSignalService,
     ) -> None:
-        self.city_snapshot_service = city_snapshot_service
+        self._city_snapshot_service = city_snapshot_service
+        self._airport_signal_service = airport_signal_service
 
-    def handle(
+    async def handle(
         self,
         query: GetCitySnapshotQuery,
     ) -> CitySnapshot:
-        city = self._build_demo_city(query.city_name)
-        signals = self._build_demo_signals()
+        city = self._build_city(query.city_name)
 
-        return self.city_snapshot_service.create_snapshot(
+        airport_signal = (
+            await self._airport_signal_service.create_arrivals_signal()
+        )
+
+        signals = [
+            airport_signal,
+            *self._build_demo_non_airport_signals(),
+        ]
+
+        return self._city_snapshot_service.create_snapshot(
             city=city,
             signals=signals,
         )
 
-    def _build_demo_city(
+    def _build_city(
         self,
         city_name: str,
     ) -> City:
@@ -63,18 +75,10 @@ class GetCitySnapshotHandler:
 
         return city
 
-    def _build_demo_signals(self) -> list[SignalEvent]:
+    def _build_demo_non_airport_signals(
+        self,
+    ) -> list[SignalEvent]:
         return [
-            SignalEvent(
-                source=SignalSource.AIRPORT,
-                signal_type=SignalType.AIRPORT_ACTIVITY,
-                zone_name="Sofia Airport",
-                impact_score=ImpactScore(80.0),
-                confidence=Confidence(0.95),
-                priority=PriorityLevel.HIGH,
-                ttl=timedelta(minutes=45),
-                payload={"airport": "SOF"},
-            ),
             SignalEvent(
                 source=SignalSource.WEATHER,
                 signal_type=SignalType.WEATHER_CONDITION,
@@ -83,7 +87,10 @@ class GetCitySnapshotHandler:
                 confidence=Confidence(0.90),
                 priority=PriorityLevel.MEDIUM,
                 ttl=timedelta(hours=2),
-                payload={"condition": "rain"},
+                payload={
+                    "condition": "rain",
+                    "data_mode": "demo",
+                },
             ),
             SignalEvent(
                 source=SignalSource.EVENTS,
@@ -93,6 +100,9 @@ class GetCitySnapshotHandler:
                 confidence=Confidence(0.88),
                 priority=PriorityLevel.HIGH,
                 ttl=timedelta(hours=3),
-                payload={"event": "concert"},
+                payload={
+                    "event": "concert",
+                    "data_mode": "demo",
+                },
             ),
         ]

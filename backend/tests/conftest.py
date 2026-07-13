@@ -17,6 +17,25 @@ from app.domain.pipelines import SignalPipeline
 from app.domain.value_objects import Confidence, ImpactScore
 from app.main import app
 from app.services.city_snapshot_service import CitySnapshotService
+from app.api.dependencies import get_snapshot_handler
+
+
+class FakeAirportSignalService:
+    async def create_arrivals_signal(self) -> SignalEvent:
+        return SignalEvent(
+            source=SignalSource.AIRPORT,
+            signal_type=SignalType.AIRPORT_ACTIVITY,
+            zone_name="Sofia Airport",
+            impact_score=ImpactScore(80.0),
+            confidence=Confidence(0.95),
+            priority=PriorityLevel.HIGH,
+            ttl=timedelta(minutes=15),
+            payload={
+                "airport": "SOF",
+                "arrivals": 3,
+                "data_mode": "test",
+            },
+        )
 
 
 @pytest.fixture
@@ -105,10 +124,21 @@ def snapshot_handler(
 ) -> GetCitySnapshotHandler:
     return GetCitySnapshotHandler(
         city_snapshot_service=snapshot_service,
+        airport_signal_service=FakeAirportSignalService(),
     )
 
 
 @pytest.fixture
-def api_client() -> Iterator[TestClient]:
-    with TestClient(app) as client:
-        yield client
+def api_client(
+    snapshot_handler: GetCitySnapshotHandler,
+) -> Iterator[TestClient]:
+    async def override_snapshot_handler():
+        yield snapshot_handler
+
+    app.dependency_overrides[get_snapshot_handler] = override_snapshot_handler
+
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        app.dependency_overrides.clear()

@@ -19,7 +19,7 @@ async def get_city_recommendation(
     city_name: str,
     handler: GetCitySnapshotHandler = Depends(get_snapshot_handler),
 ):
-    snapshot = handler.handle(
+    snapshot = await handler.handle(
         GetCitySnapshotQuery(
             city_name=city_name,
         )
