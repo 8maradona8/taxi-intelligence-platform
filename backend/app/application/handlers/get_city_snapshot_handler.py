@@ -1,12 +1,12 @@
 from datetime import timedelta
 
+from app.application.interfaces import AirportSignalReader
 from app.application.queries import GetCitySnapshotQuery
 from app.domain.decision import CitySnapshot
 from app.domain.enums import PriorityLevel, SignalSource, SignalType
 from app.domain.events import SignalEvent
 from app.domain.geography import City, Coordinates, Zone
 from app.domain.value_objects import Confidence, ImpactScore
-from app.services.airport_signal_service import AirportSignalService
 from app.services.city_snapshot_service import CitySnapshotService
 
 
@@ -15,10 +15,10 @@ class GetCitySnapshotHandler:
         self,
         *,
         city_snapshot_service: CitySnapshotService,
-        airport_signal_service: AirportSignalService,
+        airport_signal_reader: AirportSignalReader,
     ) -> None:
         self._city_snapshot_service = city_snapshot_service
-        self._airport_signal_service = airport_signal_service
+        self._airport_signal_reader = airport_signal_reader
 
     async def handle(
         self,
@@ -26,14 +26,12 @@ class GetCitySnapshotHandler:
     ) -> CitySnapshot:
         city = self._build_city(query.city_name)
 
-        airport_signal = (
-            await self._airport_signal_service.create_arrivals_signal()
-        )
+        signals = self._build_demo_non_airport_signals()
 
-        signals = [
-            airport_signal,
-            *self._build_demo_non_airport_signals(),
-        ]
+        airport_signal = await self._airport_signal_reader.get_latest_active_signal()
+
+        if airport_signal is not None:
+            signals.insert(0, airport_signal)
 
         return self._city_snapshot_service.create_snapshot(
             city=city,

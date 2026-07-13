@@ -20,8 +20,8 @@ from app.services.city_snapshot_service import CitySnapshotService
 from app.api.dependencies import get_snapshot_handler
 
 
-class FakeAirportSignalService:
-    async def create_arrivals_signal(self) -> SignalEvent:
+class FakeAirportSignalReader:
+    async def get_latest_active_signal(self) -> SignalEvent:
         return SignalEvent(
             source=SignalSource.AIRPORT,
             signal_type=SignalType.AIRPORT_ACTIVITY,
@@ -124,7 +124,7 @@ def snapshot_handler(
 ) -> GetCitySnapshotHandler:
     return GetCitySnapshotHandler(
         city_snapshot_service=snapshot_service,
-        airport_signal_service=FakeAirportSignalService(),
+        airport_signal_reader=FakeAirportSignalReader(),
     )
 
 
