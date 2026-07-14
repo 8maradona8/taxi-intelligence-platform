@@ -10,6 +10,7 @@ from app.application.dto import (
     DatabaseHealthResponse,
     SchedulerHealthResponse,
     SchedulerRunHistoryResponse,
+    SchedulerRunMetricsResponse,
     SchedulerStatusResponse,
     SystemHealthResponse,
 )
@@ -108,5 +109,16 @@ async def airport_scheduler_run_history(
         scheduler_name=AirportScheduler.NAME,
         runs=runs,
     )
+
+    return asdict(response)
+
+
+@router.get("/schedulers/airport/metrics")
+async def airport_scheduler_run_metrics(
+    service: SchedulerRunHistoryService = Depends(get_scheduler_run_history_service),
+):
+    metrics = await service.get_airport_metrics()
+
+    response = SchedulerRunMetricsResponse.from_metrics(metrics)
 
     return asdict(response)

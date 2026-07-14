@@ -1,3 +1,4 @@
+from app.application.interfaces import SchedulerRunMetrics
 from app.models.scheduler_run import SchedulerRun
 from app.repositories import SchedulerRunRepository
 from app.schedulers import AirportScheduler
@@ -19,4 +20,11 @@ class SchedulerRunHistoryService:
         return await self._repository.list_latest(
             scheduler_name=AirportScheduler.NAME,
             limit=limit,
+        )
+
+    async def get_airport_metrics(
+        self,
+    ) -> SchedulerRunMetrics:
+        return await self._repository.get_metrics(
+            scheduler_name=AirportScheduler.NAME,
         )

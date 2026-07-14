@@ -19,6 +19,9 @@ from app.application.dto.system_health_response import (
     SchedulerHealthResponse,
     SystemHealthResponse,
 )
+from app.application.dto.scheduler_run_metrics_response import (
+    SchedulerRunMetricsResponse,
+)
 
 
 __all__ = [
@@ -33,4 +36,5 @@ __all__ = [
     "SystemHealthResponse",
     "SchedulerRunHistoryItemResponse",
     "SchedulerRunHistoryResponse",
+    "SchedulerRunMetricsResponse",
 ]
