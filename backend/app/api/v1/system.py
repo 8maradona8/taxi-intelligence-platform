@@ -1,11 +1,15 @@
 from dataclasses import asdict
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
-from app.api.dependencies import get_airport_scheduler
+from app.api.dependencies import (
+    get_airport_scheduler,
+    get_scheduler_run_history_service,
+)
 from app.application.dto import (
     DatabaseHealthResponse,
     SchedulerHealthResponse,
+    SchedulerRunHistoryResponse,
     SchedulerStatusResponse,
     SystemHealthResponse,
 )
@@ -14,6 +18,9 @@ from app.database.health import check_database
 from app.schedulers import AirportScheduler
 from app.services.scheduler_health_service import (
     SchedulerHealthService,
+)
+from app.services.scheduler_run_history_service import (
+    SchedulerRunHistoryService,
 )
 
 
@@ -80,5 +87,26 @@ async def airport_scheduler_status(
         )
     else:
         response = SchedulerStatusResponse.from_status(scheduler.status)
+
+    return asdict(response)
+
+
+@router.get("/schedulers/airport/runs")
+async def airport_scheduler_run_history(
+    limit: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+    ),
+    service: SchedulerRunHistoryService = Depends(get_scheduler_run_history_service),
+):
+    runs = await service.get_airport_runs(
+        limit=limit,
+    )
+
+    response = SchedulerRunHistoryResponse.from_models(
+        scheduler_name=AirportScheduler.NAME,
+        runs=runs,
+    )
 
     return asdict(response)
