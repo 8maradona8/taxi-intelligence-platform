@@ -7,6 +7,9 @@ from app.application.interfaces import SchedulerRunMetrics
 @dataclass(frozen=True)
 class SchedulerRunMetricsResponse:
     scheduler_name: str
+    window: str
+    window_started_at: datetime | None
+    window_ended_at: datetime
     total_runs: int
     successful_runs: int
     failed_runs: int
@@ -25,6 +28,9 @@ class SchedulerRunMetricsResponse:
     ) -> "SchedulerRunMetricsResponse":
         return cls(
             scheduler_name=metrics.scheduler_name,
+            window=metrics.window.value,
+            window_started_at=(metrics.window_started_at),
+            window_ended_at=metrics.window_ended_at,
             total_runs=metrics.total_runs,
             successful_runs=metrics.successful_runs,
             failed_runs=metrics.failed_runs,

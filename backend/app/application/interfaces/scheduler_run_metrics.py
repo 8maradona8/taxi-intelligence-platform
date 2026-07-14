@@ -1,10 +1,17 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from app.application.interfaces.scheduler_metrics_window import (
+    SchedulerMetricsWindow,
+)
+
 
 @dataclass(frozen=True)
 class SchedulerRunMetrics:
     scheduler_name: str
+    window: SchedulerMetricsWindow
+    window_started_at: datetime | None
+    window_ended_at: datetime
     total_runs: int
     successful_runs: int
     failed_runs: int

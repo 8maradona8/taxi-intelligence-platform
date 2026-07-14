@@ -1,7 +1,10 @@
+from datetime import datetime
+
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.interfaces import (
+    SchedulerMetricsWindow,
     SchedulerRunMetrics,
     SchedulerRunRecord,
 )
@@ -59,6 +62,9 @@ class SchedulerRunRepository:
         self,
         *,
         scheduler_name: str,
+        window: SchedulerMetricsWindow,
+        window_started_at: datetime | None,
+        window_ended_at: datetime,
     ) -> SchedulerRunMetrics:
         statement = select(
             func.count(SchedulerRun.id).label("total_runs"),
@@ -105,7 +111,13 @@ class SchedulerRunRepository:
                     else_=None,
                 )
             ).label("last_failure_at"),
-        ).where(SchedulerRun.scheduler_name == scheduler_name)
+        ).where(
+            SchedulerRun.scheduler_name == scheduler_name,
+            SchedulerRun.completed_at <= window_ended_at,
+        )
+
+        if window_started_at is not None:
+            statement = statement.where(SchedulerRun.completed_at >= window_started_at)
 
         result = await self._session.execute(statement)
 
@@ -113,6 +125,9 @@ class SchedulerRunRepository:
 
         return SchedulerRunMetrics(
             scheduler_name=scheduler_name,
+            window=window,
+            window_started_at=window_started_at,
+            window_ended_at=window_ended_at,
             total_runs=int(row.total_runs or 0),
             successful_runs=int(row.successful_runs or 0),
             failed_runs=int(row.failed_runs or 0),

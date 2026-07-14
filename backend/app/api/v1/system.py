@@ -23,7 +23,9 @@ from app.services.scheduler_health_service import (
 from app.services.scheduler_run_history_service import (
     SchedulerRunHistoryService,
 )
-
+from app.application.interfaces import (
+    SchedulerMetricsWindow,
+)
 
 router = APIRouter(
     prefix="/system",
@@ -115,9 +117,14 @@ async def airport_scheduler_run_history(
 
 @router.get("/schedulers/airport/metrics")
 async def airport_scheduler_run_metrics(
+    window: SchedulerMetricsWindow = Query(
+        default=SchedulerMetricsWindow.HOURS_24,
+    ),
     service: SchedulerRunHistoryService = Depends(get_scheduler_run_history_service),
 ):
-    metrics = await service.get_airport_metrics()
+    metrics = await service.get_airport_metrics(
+        window=window,
+    )
 
     response = SchedulerRunMetricsResponse.from_metrics(metrics)
 
