@@ -4,6 +4,10 @@ from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
+from app.application.interfaces import (
+    SchedulerRunRecord,
+    SchedulerRunRecorder,
+)
 from app.core.logging import logger
 from app.domain.events import SignalEvent
 from app.infrastructure.http import (
@@ -34,7 +38,6 @@ class AirportSchedulerStatus:
     runs_total: int
     successes_total: int
     failures_total: int
-
     recovering: bool = False
     max_attempts: int = 1
     current_attempt: int | None = None
@@ -62,6 +65,7 @@ class AirportScheduler:
         run_on_startup: bool = True,
         max_attempts: int = 2,
         retry_backoff_seconds: float = 2.0,
+        run_recorder: SchedulerRunRecorder | None = None,
     ) -> None:
         if interval_seconds <= 0:
             raise ValueError("interval_seconds must be greater than zero")
@@ -77,6 +81,7 @@ class AirportScheduler:
         self._run_on_startup = run_on_startup
         self._max_attempts = max_attempts
         self._retry_backoff_seconds = retry_backoff_seconds
+        self._run_recorder = run_recorder
 
         self._task: asyncio.Task[None] | None = None
         self._run_lock = asyncio.Lock()
@@ -193,8 +198,10 @@ class AirportScheduler:
     async def _execute_with_retry(
         self,
     ) -> SignalEvent:
+        run_started_at = datetime.now(UTC)
+
         self._runs_total += 1
-        self._last_started_at = datetime.now(UTC)
+        self._last_started_at = run_started_at
         self._recovering = False
 
         for attempt in range(
@@ -205,8 +212,10 @@ class AirportScheduler:
 
             try:
                 signal = await self._job()
+
             except asyncio.CancelledError:
                 raise
+
             except Exception as exc:
                 self._last_error = f"{exc.__class__.__name__}: {exc}"
 
@@ -229,10 +238,60 @@ class AirportScheduler:
                     await asyncio.sleep(delay)
                     continue
 
-                self._mark_failure(exc)
+                completed_at = datetime.now(UTC)
+
+                self._mark_failure(
+                    exc,
+                    completed_at=completed_at,
+                )
+
+                await self._record_run_safely(
+                    SchedulerRunRecord(
+                        scheduler_name=self.NAME,
+                        status="failed",
+                        started_at=run_started_at,
+                        completed_at=completed_at,
+                        duration_ms=self._duration_ms(
+                            run_started_at,
+                            completed_at,
+                        ),
+                        attempts=attempt,
+                        retry_attempts=attempt - 1,
+                        error_type=exc.__class__.__name__,
+                        error_message=str(exc),
+                    )
+                )
+
                 raise
 
-            self._mark_success(signal)
+            completed_at = datetime.now(UTC)
+
+            self._mark_success(
+                signal,
+                completed_at=completed_at,
+            )
+
+            await self._record_run_safely(
+                SchedulerRunRecord(
+                    scheduler_name=self.NAME,
+                    status="success",
+                    started_at=run_started_at,
+                    completed_at=completed_at,
+                    duration_ms=self._duration_ms(
+                        run_started_at,
+                        completed_at,
+                    ),
+                    attempts=attempt,
+                    retry_attempts=attempt - 1,
+                    impact_score=signal.impact_score.value,
+                    arrivals=int(
+                        signal.payload.get(
+                            "arrivals",
+                            0,
+                        )
+                    ),
+                )
+            )
 
             return signal
 
@@ -241,9 +300,9 @@ class AirportScheduler:
     def _mark_success(
         self,
         signal: SignalEvent,
+        *,
+        completed_at: datetime,
     ) -> None:
-        completed_at = datetime.now(UTC)
-
         self._last_completed_at = completed_at
         self._last_success_at = completed_at
         self._last_error = None
@@ -264,9 +323,9 @@ class AirportScheduler:
     def _mark_failure(
         self,
         exc: Exception,
+        *,
+        completed_at: datetime,
     ) -> None:
-        completed_at = datetime.now(UTC)
-
         self._last_completed_at = completed_at
         self._last_failure_at = completed_at
         self._last_error = f"{exc.__class__.__name__}: {exc}"
@@ -274,6 +333,30 @@ class AirportScheduler:
         self._failures_total += 1
         self._recovering = False
         self._current_attempt = None
+
+    async def _record_run_safely(
+        self,
+        run: SchedulerRunRecord,
+    ) -> None:
+        if self._run_recorder is None:
+            return
+
+        try:
+            await self._run_recorder.record(run)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Failed to persist airport scheduler run history")
+
+    @staticmethod
+    def _duration_ms(
+        started_at: datetime,
+        completed_at: datetime,
+    ) -> float:
+        return round(
+            (completed_at - started_at).total_seconds() * 1000,
+            2,
+        )
 
     @classmethod
     def _is_retryable(

@@ -1,6 +1,6 @@
 import asyncio
 from datetime import timedelta
-
+from app.application.interfaces import SchedulerRunRecord
 import pytest
 
 from app.domain.enums import (
@@ -289,3 +289,80 @@ async def test_scheduler_tracks_failed_run() -> None:
     assert status.last_success_at is None
     assert status.last_failure_at is not None
     assert status.last_error == ("RuntimeError: Airport source unavailable")
+
+
+@pytest.mark.anyio
+async def test_scheduler_records_successful_run() -> None:
+    recorder = FakeSchedulerRunRecorder()
+
+    async def successful_job() -> SignalEvent:
+        return make_signal()
+
+    scheduler = AirportScheduler(
+        job=successful_job,
+        interval_seconds=300,
+        run_on_startup=False,
+        run_recorder=recorder,
+    )
+
+    await scheduler.run_once()
+
+    assert len(recorder.records) == 1
+
+    record = recorder.records[0]
+
+    assert record.scheduler_name == ("airport-signal-scheduler")
+    assert record.status == "success"
+    assert record.attempts == 1
+    assert record.retry_attempts == 0
+    assert record.impact_score == 24.0
+    assert record.arrivals == 2
+    assert record.error_type is None
+    assert record.error_message is None
+    assert record.duration_ms >= 0
+
+
+@pytest.mark.anyio
+async def test_scheduler_records_failed_run() -> None:
+    recorder = FakeSchedulerRunRecorder()
+
+    async def failing_job() -> SignalEvent:
+        raise ValueError("Invalid airport mapper state")
+
+    scheduler = AirportScheduler(
+        job=failing_job,
+        interval_seconds=300,
+        run_on_startup=False,
+        run_recorder=recorder,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Invalid airport mapper state",
+    ):
+        await scheduler.run_once()
+
+    assert len(recorder.records) == 1
+
+    record = recorder.records[0]
+
+    assert record.status == "failed"
+    assert record.attempts == 1
+    assert record.retry_attempts == 0
+    assert record.impact_score is None
+    assert record.arrivals is None
+    assert record.error_type == "ValueError"
+    assert record.error_message == ("Invalid airport mapper state")
+
+
+class FakeSchedulerRunRecorder:
+    def __init__(self) -> None:
+
+        self.records: list[SchedulerRunRecord] = []
+
+    async def record(
+        self,
+        run: SchedulerRunRecord,
+    ) -> None:
+
+        self.records.append(run)

@@ -18,7 +18,10 @@ from app.schedulers import (
     collect_and_persist_airport_signal,
 )
 from app.shared.errors import register_exception_handlers
-
+from app.database.session import AsyncSessionLocal
+from app.services.postgres_scheduler_run_recorder import (
+    PostgresSchedulerRunRecorder,
+)
 
 setup_logging()
 
@@ -46,6 +49,9 @@ async def lifespan(app: FastAPI):
             run_on_startup=(settings.airport_scheduler_run_on_startup),
             max_attempts=(settings.airport_scheduler_max_attempts),
             retry_backoff_seconds=(settings.airport_scheduler_retry_backoff_seconds),
+            run_recorder=PostgresSchedulerRunRecorder(
+                session_factory=AsyncSessionLocal,
+            ),
         )
 
         await airport_scheduler.start()
