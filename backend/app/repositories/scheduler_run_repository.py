@@ -4,6 +4,8 @@ from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.interfaces import (
+    SchedulerFailureBreakdown,
+    SchedulerFailureGroup,
     SchedulerMetricsWindow,
     SchedulerRunMetrics,
     SchedulerRunRecord,
@@ -120,7 +122,6 @@ class SchedulerRunRepository:
             statement = statement.where(SchedulerRun.completed_at >= window_started_at)
 
         result = await self._session.execute(statement)
-
         row = result.one()
 
         return SchedulerRunMetrics(
@@ -143,4 +144,77 @@ class SchedulerRunRepository:
             last_run_at=row.last_run_at,
             last_success_at=row.last_success_at,
             last_failure_at=row.last_failure_at,
+        )
+
+    async def get_failure_breakdown(
+        self,
+        *,
+        scheduler_name: str,
+        window: SchedulerMetricsWindow,
+        window_started_at: datetime | None,
+        window_ended_at: datetime,
+    ) -> SchedulerFailureBreakdown:
+        filters = [
+            SchedulerRun.scheduler_name == scheduler_name,
+            SchedulerRun.status == "failed",
+            SchedulerRun.completed_at <= window_ended_at,
+        ]
+
+        if window_started_at is not None:
+            filters.append(SchedulerRun.completed_at >= window_started_at)
+
+        total_result = await self._session.execute(
+            select(func.count(SchedulerRun.id)).where(*filters)
+        )
+
+        total_failures = int(total_result.scalar_one() or 0)
+
+        error_type_expression = func.coalesce(
+            SchedulerRun.error_type,
+            "UnknownError",
+        )
+
+        grouped_result = await self._session.execute(
+            select(
+                error_type_expression.label("error_type"),
+                func.count(SchedulerRun.id).label("failure_count"),
+                func.max(SchedulerRun.completed_at).label("last_occurred_at"),
+            )
+            .where(*filters)
+            .group_by(error_type_expression)
+            .order_by(
+                func.count(SchedulerRun.id).desc(),
+                func.max(SchedulerRun.completed_at).desc(),
+            )
+        )
+
+        groups: list[SchedulerFailureGroup] = []
+
+        for row in grouped_result.all():
+            latest_message_result = await self._session.execute(
+                select(SchedulerRun.error_message)
+                .where(
+                    *filters,
+                    error_type_expression == row.error_type,
+                )
+                .order_by(SchedulerRun.completed_at.desc())
+                .limit(1)
+            )
+
+            groups.append(
+                SchedulerFailureGroup(
+                    error_type=str(row.error_type),
+                    count=int(row.failure_count),
+                    last_occurred_at=row.last_occurred_at,
+                    latest_message=(latest_message_result.scalar_one_or_none()),
+                )
+            )
+
+        return SchedulerFailureBreakdown(
+            scheduler_name=scheduler_name,
+            window=window,
+            window_started_at=window_started_at,
+            window_ended_at=window_ended_at,
+            total_failures=total_failures,
+            failures=groups,
         )

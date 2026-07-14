@@ -8,6 +8,7 @@ from app.api.dependencies import (
 )
 from app.application.dto import (
     DatabaseHealthResponse,
+    SchedulerFailureBreakdownResponse,
     SchedulerHealthResponse,
     SchedulerRunHistoryResponse,
     SchedulerRunMetricsResponse,
@@ -127,5 +128,21 @@ async def airport_scheduler_run_metrics(
     )
 
     response = SchedulerRunMetricsResponse.from_metrics(metrics)
+
+    return asdict(response)
+
+
+@router.get("/schedulers/airport/failures")
+async def airport_scheduler_failure_breakdown(
+    window: SchedulerMetricsWindow = Query(
+        default=SchedulerMetricsWindow.HOURS_24,
+    ),
+    service: SchedulerRunHistoryService = Depends(get_scheduler_run_history_service),
+):
+    breakdown = await service.get_airport_failure_breakdown(
+        window=window,
+    )
+
+    response = SchedulerFailureBreakdownResponse.from_breakdown(breakdown)
 
     return asdict(response)

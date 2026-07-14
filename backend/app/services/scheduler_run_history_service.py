@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from app.application.interfaces import (
+    SchedulerFailureBreakdown,
     SchedulerMetricsWindow,
     SchedulerRunMetrics,
 )
@@ -33,11 +34,7 @@ class SchedulerRunHistoryService:
         window: SchedulerMetricsWindow = (SchedulerMetricsWindow.HOURS_24),
         now: datetime | None = None,
     ) -> SchedulerRunMetrics:
-        window_ended_at = now or datetime.now(UTC)
-
-        if window_ended_at.tzinfo is None:
-            window_ended_at = window_ended_at.replace(tzinfo=UTC)
-
+        window_ended_at = self._normalize_now(now)
         window_started_at = window.started_at(ended_at=window_ended_at)
 
         return await self._repository.get_metrics(
@@ -46,3 +43,30 @@ class SchedulerRunHistoryService:
             window_started_at=window_started_at,
             window_ended_at=window_ended_at,
         )
+
+    async def get_airport_failure_breakdown(
+        self,
+        *,
+        window: SchedulerMetricsWindow = (SchedulerMetricsWindow.HOURS_24),
+        now: datetime | None = None,
+    ) -> SchedulerFailureBreakdown:
+        window_ended_at = self._normalize_now(now)
+        window_started_at = window.started_at(ended_at=window_ended_at)
+
+        return await self._repository.get_failure_breakdown(
+            scheduler_name=AirportScheduler.NAME,
+            window=window,
+            window_started_at=window_started_at,
+            window_ended_at=window_ended_at,
+        )
+
+    @staticmethod
+    def _normalize_now(
+        value: datetime | None,
+    ) -> datetime:
+        normalized = value or datetime.now(UTC)
+
+        if normalized.tzinfo is None:
+            return normalized.replace(tzinfo=UTC)
+
+        return normalized

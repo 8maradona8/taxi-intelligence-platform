@@ -22,7 +22,10 @@ from app.application.dto.system_health_response import (
 from app.application.dto.scheduler_run_metrics_response import (
     SchedulerRunMetricsResponse,
 )
-
+from app.application.dto.scheduler_failure_breakdown_response import (
+    SchedulerFailureBreakdownResponse,
+    SchedulerFailureItemResponse,
+)
 
 __all__ = [
     "CitySnapshotResponse",
@@ -37,4 +40,6 @@ __all__ = [
     "SchedulerRunHistoryItemResponse",
     "SchedulerRunHistoryResponse",
     "SchedulerRunMetricsResponse",
+    "SchedulerFailureBreakdownResponse",
+    "SchedulerFailureItemResponse",
 ]
