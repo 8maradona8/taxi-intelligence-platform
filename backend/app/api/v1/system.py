@@ -14,6 +14,7 @@ from app.application.dto import (
     SchedulerRunMetricsResponse,
     SchedulerStatusResponse,
     SystemHealthResponse,
+    SchedulerReliabilityTrendResponse,
 )
 from app.core.settings import settings
 from app.database.health import check_database
@@ -26,6 +27,7 @@ from app.services.scheduler_run_history_service import (
 )
 from app.application.interfaces import (
     SchedulerMetricsWindow,
+    SchedulerTrendGranularity,
 )
 
 router = APIRouter(
@@ -144,5 +146,25 @@ async def airport_scheduler_failure_breakdown(
     )
 
     response = SchedulerFailureBreakdownResponse.from_breakdown(breakdown)
+
+    return asdict(response)
+
+
+@router.get("/schedulers/airport/trends")
+async def airport_scheduler_reliability_trend(
+    window: SchedulerMetricsWindow = Query(
+        default=SchedulerMetricsWindow.HOURS_24,
+    ),
+    granularity: SchedulerTrendGranularity | None = Query(
+        default=None,
+    ),
+    service: SchedulerRunHistoryService = Depends(get_scheduler_run_history_service),
+):
+    trend = await service.get_airport_reliability_trend(
+        window=window,
+        granularity=granularity,
+    )
+
+    response = SchedulerReliabilityTrendResponse.from_trend(trend)
 
     return asdict(response)

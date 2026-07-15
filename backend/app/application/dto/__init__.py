@@ -26,6 +26,10 @@ from app.application.dto.scheduler_failure_breakdown_response import (
     SchedulerFailureBreakdownResponse,
     SchedulerFailureItemResponse,
 )
+from app.application.dto.scheduler_reliability_trend_response import (
+    SchedulerReliabilityTrendPointResponse,
+    SchedulerReliabilityTrendResponse,
+)
 
 __all__ = [
     "CitySnapshotResponse",
@@ -42,4 +46,6 @@ __all__ = [
     "SchedulerRunMetricsResponse",
     "SchedulerFailureBreakdownResponse",
     "SchedulerFailureItemResponse",
+    "SchedulerReliabilityTrendPointResponse",
+    "SchedulerReliabilityTrendResponse",
 ]

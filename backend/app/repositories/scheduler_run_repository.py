@@ -7,8 +7,11 @@ from app.application.interfaces import (
     SchedulerFailureBreakdown,
     SchedulerFailureGroup,
     SchedulerMetricsWindow,
+    SchedulerReliabilityTrend,
+    SchedulerReliabilityTrendPoint,
     SchedulerRunMetrics,
     SchedulerRunRecord,
+    SchedulerTrendGranularity,
 )
 from app.models.scheduler_run import SchedulerRun
 
@@ -205,7 +208,7 @@ class SchedulerRunRepository:
                 SchedulerFailureGroup(
                     error_type=str(row.error_type),
                     count=int(row.failure_count),
-                    last_occurred_at=row.last_occurred_at,
+                    last_occurred_at=(row.last_occurred_at),
                     latest_message=(latest_message_result.scalar_one_or_none()),
                 )
             )
@@ -217,4 +220,88 @@ class SchedulerRunRepository:
             window_ended_at=window_ended_at,
             total_failures=total_failures,
             failures=groups,
+        )
+
+    async def get_reliability_trend(
+        self,
+        *,
+        scheduler_name: str,
+        window: SchedulerMetricsWindow,
+        granularity: SchedulerTrendGranularity,
+        window_started_at: datetime | None,
+        window_ended_at: datetime,
+    ) -> SchedulerReliabilityTrend:
+        period_expression = func.date_trunc(
+            granularity.value,
+            SchedulerRun.completed_at,
+        )
+
+        statement = (
+            select(
+                period_expression.label("period_started_at"),
+                func.count(SchedulerRun.id).label("total_runs"),
+                func.sum(
+                    case(
+                        (
+                            SchedulerRun.status == "success",
+                            1,
+                        ),
+                        else_=0,
+                    )
+                ).label("successful_runs"),
+                func.sum(
+                    case(
+                        (
+                            SchedulerRun.status == "failed",
+                            1,
+                        ),
+                        else_=0,
+                    )
+                ).label("failed_runs"),
+                func.avg(SchedulerRun.duration_ms).label("average_duration_ms"),
+                func.avg(SchedulerRun.attempts).label("average_attempts"),
+                func.coalesce(
+                    func.sum(SchedulerRun.retry_attempts),
+                    0,
+                ).label("total_retry_attempts"),
+            )
+            .where(
+                SchedulerRun.scheduler_name == scheduler_name,
+                SchedulerRun.completed_at <= window_ended_at,
+            )
+            .group_by(period_expression)
+            .order_by(period_expression.asc())
+        )
+
+        if window_started_at is not None:
+            statement = statement.where(SchedulerRun.completed_at >= window_started_at)
+
+        result = await self._session.execute(statement)
+
+        points = [
+            SchedulerReliabilityTrendPoint(
+                period_started_at=(row.period_started_at),
+                total_runs=int(row.total_runs or 0),
+                successful_runs=int(row.successful_runs or 0),
+                failed_runs=int(row.failed_runs or 0),
+                average_duration_ms=round(
+                    float(row.average_duration_ms or 0),
+                    2,
+                ),
+                average_attempts=round(
+                    float(row.average_attempts or 0),
+                    2,
+                ),
+                total_retry_attempts=int(row.total_retry_attempts or 0),
+            )
+            for row in result.all()
+        ]
+
+        return SchedulerReliabilityTrend(
+            scheduler_name=scheduler_name,
+            window=window,
+            granularity=granularity,
+            window_started_at=window_started_at,
+            window_ended_at=window_ended_at,
+            points=points,
         )
