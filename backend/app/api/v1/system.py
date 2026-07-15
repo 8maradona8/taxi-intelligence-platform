@@ -1,7 +1,9 @@
 from dataclasses import asdict
 
 from fastapi import APIRouter, Depends, Query
-
+from app.services.scheduler_observability_service import (
+    SchedulerObservabilityService,
+)
 from app.api.dependencies import (
     get_airport_scheduler,
     get_scheduler_run_history_service,
@@ -15,6 +17,7 @@ from app.application.dto import (
     SchedulerStatusResponse,
     SystemHealthResponse,
     SchedulerReliabilityTrendResponse,
+    SchedulerObservabilityOverviewResponse,
 )
 from app.core.settings import settings
 from app.database.health import check_database
@@ -166,5 +169,40 @@ async def airport_scheduler_reliability_trend(
     )
 
     response = SchedulerReliabilityTrendResponse.from_trend(trend)
+
+    return asdict(response)
+
+
+@router.get("/schedulers/airport/overview")
+async def airport_scheduler_observability_overview(
+    window: SchedulerMetricsWindow = Query(
+        default=SchedulerMetricsWindow.HOURS_24,
+    ),
+    granularity: SchedulerTrendGranularity | None = Query(
+        default=None,
+    ),
+    scheduler: AirportScheduler | None = Depends(get_airport_scheduler),
+    history_service: SchedulerRunHistoryService = Depends(
+        get_scheduler_run_history_service
+    ),
+):
+    service = SchedulerObservabilityService(
+        history_service=history_service,
+    )
+
+    overview = await service.get_airport_overview(
+        scheduler=scheduler,
+        window=window,
+        granularity=granularity,
+    )
+
+    response = SchedulerObservabilityOverviewResponse.from_overview(
+        overview,
+        scheduler_enabled=(settings.airport_scheduler_enabled),
+        interval_seconds=(settings.airport_scheduler_interval_seconds),
+        run_on_startup=(settings.airport_scheduler_run_on_startup),
+        max_attempts=(settings.airport_scheduler_max_attempts),
+        retry_backoff_seconds=(settings.airport_scheduler_retry_backoff_seconds),
+    )
 
     return asdict(response)

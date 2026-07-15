@@ -22,6 +22,9 @@ from app.application.interfaces.scheduler_run_recorder import (
 from app.application.interfaces.scheduler_trend_granularity import (
     SchedulerTrendGranularity,
 )
+from app.application.interfaces.scheduler_observability_overview import (
+    SchedulerObservabilityOverview,
+)
 
 __all__ = [
     "AirportSignalReader",
@@ -34,4 +37,5 @@ __all__ = [
     "SchedulerRunRecord",
     "SchedulerRunRecorder",
     "SchedulerTrendGranularity",
+    "SchedulerObservabilityOverview",
 ]
