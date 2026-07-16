@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-
+from app.application.interfaces import AIRPORT_SCHEDULER
 from app.api.middleware import RequestLoggingMiddleware
 from app.api.v1.airport_signals import (
     router as airport_signals_router,
@@ -15,6 +15,7 @@ from app.core.settings import settings
 from app.database.health import check_database
 from app.schedulers import (
     AirportScheduler,
+    SchedulerRegistry,
     collect_and_persist_airport_signal,
 )
 from app.shared.errors import register_exception_handlers
@@ -42,6 +43,18 @@ async def lifespan(app: FastAPI):
     airport_scheduler: AirportScheduler | None = None
     app.state.airport_scheduler = None
 
+    scheduler_registry = SchedulerRegistry()
+
+    scheduler_registry.register(
+        identity=AIRPORT_SCHEDULER,
+        enabled=settings.airport_scheduler_enabled,
+    )
+
+    app.state.scheduler_registry = scheduler_registry
+    app.state.airport_scheduler = None
+
+    airport_scheduler: AirportScheduler | None = None
+
     if settings.airport_scheduler_enabled and database_ok:
         airport_scheduler = AirportScheduler(
             job=collect_and_persist_airport_signal,
@@ -55,6 +68,12 @@ async def lifespan(app: FastAPI):
         )
 
         await airport_scheduler.start()
+
+        scheduler_registry.attach_runtime(
+            scheduler_key=AIRPORT_SCHEDULER.key,
+            runtime=airport_scheduler,
+        )
+
         app.state.airport_scheduler = airport_scheduler
 
     elif not settings.airport_scheduler_enabled:
@@ -73,7 +92,10 @@ async def lifespan(app: FastAPI):
         if airport_scheduler is not None:
             await airport_scheduler.stop()
 
+        scheduler_registry.detach_runtime(AIRPORT_SCHEDULER.key)
+
         app.state.airport_scheduler = None
+        app.state.scheduler_registry = None
 
         logger.info("=" * 60)
         logger.info("Stopping Taxi Intelligence Platform")

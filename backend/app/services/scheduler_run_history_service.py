@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from app.application.interfaces import (
     SchedulerFailureBreakdown,
+    SchedulerIdentity,
     SchedulerMetricsWindow,
     SchedulerReliabilityTrend,
     SchedulerRunMetrics,
@@ -9,7 +10,6 @@ from app.application.interfaces import (
 )
 from app.models.scheduler_run import SchedulerRun
 from app.repositories import SchedulerRunRepository
-from app.schedulers import AirportScheduler
 
 
 class SchedulerRunHistoryService:
@@ -17,20 +17,28 @@ class SchedulerRunHistoryService:
         self,
         *,
         repository: SchedulerRunRepository,
+        scheduler_identity: SchedulerIdentity,
     ) -> None:
         self._repository = repository
+        self._scheduler_identity = scheduler_identity
 
-    async def get_airport_runs(
+    @property
+    def scheduler_identity(
+        self,
+    ) -> SchedulerIdentity:
+        return self._scheduler_identity
+
+    async def get_runs(
         self,
         *,
         limit: int = 20,
     ) -> list[SchedulerRun]:
         return await self._repository.list_latest(
-            scheduler_name=AirportScheduler.NAME,
+            scheduler_name=self._scheduler_identity.name,
             limit=limit,
         )
 
-    async def get_airport_metrics(
+    async def get_metrics(
         self,
         *,
         window: SchedulerMetricsWindow = (SchedulerMetricsWindow.HOURS_24),
@@ -41,13 +49,13 @@ class SchedulerRunHistoryService:
         window_started_at = window.started_at(ended_at=window_ended_at)
 
         return await self._repository.get_metrics(
-            scheduler_name=AirportScheduler.NAME,
+            scheduler_name=self._scheduler_identity.name,
             window=window,
             window_started_at=window_started_at,
             window_ended_at=window_ended_at,
         )
 
-    async def get_airport_failure_breakdown(
+    async def get_failure_breakdown(
         self,
         *,
         window: SchedulerMetricsWindow = (SchedulerMetricsWindow.HOURS_24),
@@ -58,13 +66,13 @@ class SchedulerRunHistoryService:
         window_started_at = window.started_at(ended_at=window_ended_at)
 
         return await self._repository.get_failure_breakdown(
-            scheduler_name=AirportScheduler.NAME,
+            scheduler_name=self._scheduler_identity.name,
             window=window,
             window_started_at=window_started_at,
             window_ended_at=window_ended_at,
         )
 
-    async def get_airport_reliability_trend(
+    async def get_reliability_trend(
         self,
         *,
         window: SchedulerMetricsWindow = (SchedulerMetricsWindow.HOURS_24),
@@ -80,11 +88,55 @@ class SchedulerRunHistoryService:
         )
 
         return await self._repository.get_reliability_trend(
-            scheduler_name=AirportScheduler.NAME,
+            scheduler_name=self._scheduler_identity.name,
             window=window,
             granularity=resolved_granularity,
             window_started_at=window_started_at,
             window_ended_at=window_ended_at,
+        )
+
+    async def get_airport_runs(
+        self,
+        *,
+        limit: int = 20,
+    ) -> list[SchedulerRun]:
+        return await self.get_runs(
+            limit=limit,
+        )
+
+    async def get_airport_metrics(
+        self,
+        *,
+        window: SchedulerMetricsWindow = (SchedulerMetricsWindow.HOURS_24),
+        now: datetime | None = None,
+    ) -> SchedulerRunMetrics:
+        return await self.get_metrics(
+            window=window,
+            now=now,
+        )
+
+    async def get_airport_failure_breakdown(
+        self,
+        *,
+        window: SchedulerMetricsWindow = (SchedulerMetricsWindow.HOURS_24),
+        now: datetime | None = None,
+    ) -> SchedulerFailureBreakdown:
+        return await self.get_failure_breakdown(
+            window=window,
+            now=now,
+        )
+
+    async def get_airport_reliability_trend(
+        self,
+        *,
+        window: SchedulerMetricsWindow = (SchedulerMetricsWindow.HOURS_24),
+        granularity: (SchedulerTrendGranularity | None) = None,
+        now: datetime | None = None,
+    ) -> SchedulerReliabilityTrend:
+        return await self.get_reliability_trend(
+            window=window,
+            granularity=granularity,
+            now=now,
         )
 
     @staticmethod

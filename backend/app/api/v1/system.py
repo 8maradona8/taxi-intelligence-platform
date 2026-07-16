@@ -7,6 +7,7 @@ from app.services.scheduler_observability_service import (
 from app.api.dependencies import (
     get_airport_scheduler,
     get_scheduler_run_history_service,
+    get_scheduler_registry,
 )
 from app.application.dto import (
     DatabaseHealthResponse,
@@ -18,10 +19,14 @@ from app.application.dto import (
     SystemHealthResponse,
     SchedulerReliabilityTrendResponse,
     SchedulerObservabilityOverviewResponse,
+    SchedulerRegistryResponse,
 )
 from app.core.settings import settings
 from app.database.health import check_database
-from app.schedulers import AirportScheduler
+from app.schedulers import (
+    AirportScheduler,
+    SchedulerRegistry,
+)
 from app.services.scheduler_health_service import (
     SchedulerHealthService,
 )
@@ -78,6 +83,15 @@ async def system_health(
         ),
         airport_scheduler=SchedulerHealthResponse.from_health(scheduler_health),
     )
+
+    return asdict(response)
+
+
+@router.get("/schedulers")
+async def scheduler_registry_metadata(
+    registry: SchedulerRegistry = Depends(get_scheduler_registry),
+):
+    response = SchedulerRegistryResponse.from_registrations(registry.list_all())
 
     return asdict(response)
 

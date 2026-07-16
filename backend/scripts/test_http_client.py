@@ -14,9 +14,7 @@ async def main() -> None:
             max_retries=2,
             backoff_seconds=0.5,
         ) as client:
-            data = await client.get_json(
-                "/todos/1"
-            )
+            data = await client.get_json("/todos/1")
 
             print("HTTP request successful")
             print("Response:", data)

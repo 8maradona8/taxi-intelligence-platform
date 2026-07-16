@@ -3,6 +3,8 @@ from app.api.dependencies.airport_history import (
 )
 from app.api.dependencies.scheduler import (
     get_airport_scheduler,
+    get_scheduler_registration,
+    get_scheduler_registry,
 )
 from app.api.dependencies.scheduler_history import (
     get_scheduler_run_history_service,
@@ -14,4 +16,6 @@ __all__ = [
     "get_airport_signal_history_service",
     "get_scheduler_run_history_service",
     "get_snapshot_handler",
+    "get_scheduler_registration",
+    "get_scheduler_registry",
 ]

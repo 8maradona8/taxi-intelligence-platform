@@ -8,9 +8,7 @@ from app.infrastructure.clients import SofiaAirportWebsiteClient
 from app.infrastructure.http import AsyncHttpClient
 
 
-FIXTURE_PATH = Path(
-    "tests/fixtures/airport/sofia_airport_arrivals.html"
-)
+FIXTURE_PATH = Path("tests/fixtures/airport/sofia_airport_arrivals.html")
 
 
 async def main() -> None:
@@ -83,10 +81,7 @@ async def main() -> None:
 
         lowered_text = text.lower()
 
-        if any(
-            keyword in lowered_text
-            for keyword in keywords
-        ):
+        if any(keyword in lowered_text for keyword in keywords):
             if 20 <= len(text) <= 500:
                 matches.append(element)
 

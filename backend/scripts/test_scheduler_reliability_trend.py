@@ -1,6 +1,7 @@
 import asyncio
 
 from app.application.interfaces import (
+    AIRPORT_SCHEDULER,
     SchedulerMetricsWindow,
 )
 from app.database.session import AsyncSessionLocal
@@ -14,10 +15,13 @@ async def main() -> None:
     async with AsyncSessionLocal() as session:
         service = SchedulerRunHistoryService(
             repository=SchedulerRunRepository(session),
+            scheduler_identity=AIRPORT_SCHEDULER,
         )
 
         for window in SchedulerMetricsWindow:
-            trend = await service.get_airport_reliability_trend(window=window)
+            trend = await service.get_reliability_trend(
+                window=window,
+            )
 
             print("=" * 50)
             print("Window:", trend.window.value)

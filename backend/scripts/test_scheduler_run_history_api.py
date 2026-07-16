@@ -5,12 +5,16 @@ from app.repositories import SchedulerRunRepository
 from app.services.scheduler_run_history_service import (
     SchedulerRunHistoryService,
 )
+from app.application.interfaces import (
+    AIRPORT_SCHEDULER,
+)
 
 
 async def main() -> None:
     async with AsyncSessionLocal() as session:
         service = SchedulerRunHistoryService(
             repository=SchedulerRunRepository(session),
+            scheduler_identity=AIRPORT_SCHEDULER,
         )
 
         runs = await service.get_airport_runs(
