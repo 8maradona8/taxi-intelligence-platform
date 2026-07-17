@@ -11,9 +11,9 @@ from app.services.signal_persistence_service import (
 )
 
 
-class AirportSignalPersistenceService(SignalPersistenceService):
-    SOFIA_AIRPORT_LATITUDE = 42.6967
-    SOFIA_AIRPORT_LONGITUDE = 23.4114
+class RailwaySignalPersistenceService(SignalPersistenceService):
+    SOFIA_CENTRAL_STATION_LATITUDE = 42.7118
+    SOFIA_CENTRAL_STATION_LONGITUDE = 23.3201
 
     def __init__(
         self,
@@ -28,20 +28,23 @@ class AirportSignalPersistenceService(SignalPersistenceService):
             zone_configuration=SignalZoneConfiguration(
                 city="Sofia",
                 country="Bulgaria",
-                latitude=(self.SOFIA_AIRPORT_LATITUDE),
-                longitude=(self.SOFIA_AIRPORT_LONGITUDE),
+                latitude=(self.SOFIA_CENTRAL_STATION_LATITUDE),
+                longitude=(self.SOFIA_CENTRAL_STATION_LONGITUDE),
             ),
-            payload_fingerprint=(self._airport_payload_fingerprint),
+            payload_fingerprint=(self._railway_payload_fingerprint),
             deduplication_window=(deduplication_window),
         )
 
     @staticmethod
-    def _airport_payload_fingerprint(
+    def _railway_payload_fingerprint(
         payload: dict[str, Any],
     ) -> tuple[object, ...]:
         return (
-            tuple(payload.get("flight_numbers", [])),
+            payload.get("mode"),
+            payload.get("station_code"),
+            tuple(payload.get("train_numbers", [])),
             payload.get("arrivals"),
             payload.get("delayed"),
-            payload.get("expected"),
+            payload.get("early"),
+            payload.get("total_positive_delay_minutes"),
         )

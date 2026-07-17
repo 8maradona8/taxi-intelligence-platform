@@ -1,6 +1,9 @@
 from fastapi.testclient import TestClient
 
-from app.application.interfaces import AIRPORT_SCHEDULER
+from app.application.interfaces import (
+    AIRPORT_SCHEDULER,
+    RAILWAY_SCHEDULER,
+)
 from app.main import app
 from datetime import UTC, datetime
 
@@ -58,6 +61,12 @@ def test_scheduler_registry_endpoint(
         runtime=FakeAirportRuntime(),
     )
 
+    registry.register(
+        identity=RAILWAY_SCHEDULER,
+        enabled=True,
+        runtime=FakeAirportRuntime(),
+    )
+
     app.state.scheduler_registry = registry
 
     try:
@@ -69,7 +78,7 @@ def test_scheduler_registry_endpoint(
 
     data = response.json()
 
-    assert data["count"] == 1
+    assert data["count"] == 2
 
     scheduler = data["schedulers"][0]
 

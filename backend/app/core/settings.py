@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     airport_scheduler_max_attempts: int = 2
     airport_scheduler_retry_backoff_seconds: float = 2.0
 
+    railway_scheduler_enabled: bool = True
+    railway_scheduler_interval_seconds: int = 300
+    railway_scheduler_run_on_startup: bool = True
+
+    railway_scheduler_max_attempts: int = 2
+    railway_scheduler_retry_backoff_seconds: float = 2.0
+
     model_config = SettingsConfigDict(
         env_file="../.env",
         case_sensitive=False,

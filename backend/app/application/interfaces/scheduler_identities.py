@@ -7,3 +7,8 @@ AIRPORT_SCHEDULER = SchedulerIdentity(
     key="airport",
     name="airport-signal-scheduler",
 )
+
+RAILWAY_SCHEDULER = SchedulerIdentity(
+    key="railway",
+    name="railway-signal-scheduler",
+)

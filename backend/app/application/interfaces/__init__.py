@@ -27,6 +27,7 @@ from app.application.interfaces.scheduler_observability_overview import (
 )
 from app.application.interfaces.scheduler_identities import (
     AIRPORT_SCHEDULER,
+    RAILWAY_SCHEDULER,
 )
 from app.application.interfaces.scheduler_identity import (
     SchedulerIdentity,
@@ -52,4 +53,5 @@ __all__ = [
     "SchedulerIdentity",
     "SchedulerRuntime",
     "SchedulerRuntimeStatus",
+    "RAILWAY_SCHEDULER",
 ]

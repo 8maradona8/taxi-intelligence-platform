@@ -8,17 +8,17 @@ from app.schedulers.periodic_signal_scheduler import (
 )
 
 
-AirportJob = SignalSchedulerJob
-AirportSchedulerStatus = PeriodicSignalSchedulerStatus
+RailwayJob = SignalSchedulerJob
+RailwaySchedulerStatus = PeriodicSignalSchedulerStatus
 
 
-class AirportScheduler(PeriodicSignalScheduler):
-    NAME = "airport-signal-scheduler"
+class RailwayScheduler(PeriodicSignalScheduler):
+    NAME = "railway-signal-scheduler"
 
     def __init__(
         self,
         *,
-        job: AirportJob,
+        job: RailwayJob,
         interval_seconds: float = 300.0,
         run_on_startup: bool = True,
         max_attempts: int = 2,
