@@ -37,6 +37,11 @@ from app.application.interfaces.scheduler_runtime import (
     SchedulerRuntimeStatus,
 )
 
+from app.application.interfaces.scheduler_configuration import (
+    SchedulerConfiguration,
+)
+
+
 __all__ = [
     "AirportSignalReader",
     "SchedulerFailureBreakdown",
@@ -54,4 +59,5 @@ __all__ = [
     "SchedulerRuntime",
     "SchedulerRuntimeStatus",
     "RAILWAY_SCHEDULER",
+    "SchedulerConfiguration",
 ]

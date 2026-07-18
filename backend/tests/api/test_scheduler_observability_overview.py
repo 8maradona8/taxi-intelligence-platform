@@ -15,7 +15,7 @@ from app.main import app
 
 
 class FakeOverviewHistoryService:
-    async def get_airport_metrics(
+    async def get_metrics(
         self,
         *,
         window: SchedulerMetricsWindow,
@@ -37,7 +37,7 @@ class FakeOverviewHistoryService:
             last_failure_at=None,
         )
 
-    async def get_airport_failure_breakdown(
+    async def get_failure_breakdown(
         self,
         *,
         window: SchedulerMetricsWindow,
@@ -52,7 +52,7 @@ class FakeOverviewHistoryService:
             failures=[],
         )
 
-    async def get_airport_reliability_trend(
+    async def get_reliability_trend(
         self,
         *,
         window: SchedulerMetricsWindow,

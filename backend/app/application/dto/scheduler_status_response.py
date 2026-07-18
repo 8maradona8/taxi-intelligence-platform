@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from app.schedulers import AirportSchedulerStatus
+from app.application.interfaces import (
+    SchedulerRuntimeStatus,
+)
 
 
 @dataclass(frozen=True)
@@ -34,7 +36,7 @@ class SchedulerStatusResponse:
     @classmethod
     def from_status(
         cls,
-        status: AirportSchedulerStatus,
+        status: SchedulerRuntimeStatus,
     ) -> "SchedulerStatusResponse":
         return cls(
             name=status.name,
@@ -67,6 +69,7 @@ class SchedulerStatusResponse:
     def unavailable(
         cls,
         *,
+        name: str,
         enabled: bool,
         interval_seconds: float,
         run_on_startup: bool,
@@ -74,7 +77,7 @@ class SchedulerStatusResponse:
         retry_backoff_seconds: float,
     ) -> "SchedulerStatusResponse":
         return cls(
-            name="airport-signal-scheduler",
+            name=name,
             enabled=enabled,
             initialized=False,
             running=False,
@@ -95,7 +98,7 @@ class SchedulerStatusResponse:
             recovering=False,
             max_attempts=max_attempts,
             current_attempt=None,
-            retry_backoff_seconds=retry_backoff_seconds,
+            retry_backoff_seconds=(retry_backoff_seconds),
             retry_attempts_total=0,
             overlap_skips_total=0,
         )

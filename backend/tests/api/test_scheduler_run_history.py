@@ -5,12 +5,20 @@ from fastapi.testclient import TestClient
 from app.api.dependencies import (
     get_scheduler_run_history_service,
 )
+from app.application.interfaces import (
+    AIRPORT_SCHEDULER,
+    SchedulerIdentity,
+)
 from app.main import app
 from app.models.scheduler_run import SchedulerRun
 
 
 class FakeSchedulerRunHistoryService:
-    async def get_airport_runs(
+    @property
+    def scheduler_identity(self) -> SchedulerIdentity:
+        return AIRPORT_SCHEDULER
+
+    async def get_runs(
         self,
         *,
         limit: int = 20,
@@ -81,7 +89,7 @@ def test_scheduler_run_history_endpoint(
 
     data = response.json()
 
-    assert data["scheduler_name"] == ("airport-signal-scheduler")
+    assert data["scheduler_name"] == "airport-signal-scheduler"
     assert data["count"] == 1
 
     run = data["runs"][0]

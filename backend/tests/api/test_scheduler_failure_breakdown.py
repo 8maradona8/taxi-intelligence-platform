@@ -14,7 +14,7 @@ from app.main import app
 
 
 class FakeFailureBreakdownService:
-    async def get_airport_failure_breakdown(
+    async def get_failure_breakdown(
         self,
         *,
         window: SchedulerMetricsWindow = (SchedulerMetricsWindow.HOURS_24),

@@ -13,7 +13,7 @@ from app.main import app
 
 
 class FakeSchedulerMetricsService:
-    async def get_airport_metrics(
+    async def get_metrics(
         self,
         *,
         window: SchedulerMetricsWindow = (SchedulerMetricsWindow.HOURS_24),

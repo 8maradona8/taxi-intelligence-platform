@@ -15,7 +15,7 @@ from app.main import app
 
 
 class FakeTrendService:
-    async def get_airport_reliability_trend(
+    async def get_reliability_trend(
         self,
         *,
         window: SchedulerMetricsWindow,

@@ -18,7 +18,7 @@ class FakeHistoryService:
     def __init__(self) -> None:
         self.received_times: list[datetime] = []
 
-    async def get_airport_metrics(
+    async def get_metrics(
         self,
         *,
         window: SchedulerMetricsWindow,
@@ -42,7 +42,7 @@ class FakeHistoryService:
             last_failure_at=None,
         )
 
-    async def get_airport_failure_breakdown(
+    async def get_failure_breakdown(
         self,
         *,
         window: SchedulerMetricsWindow,
@@ -59,7 +59,7 @@ class FakeHistoryService:
             failures=[],
         )
 
-    async def get_airport_reliability_trend(
+    async def get_reliability_trend(
         self,
         *,
         window: SchedulerMetricsWindow,
