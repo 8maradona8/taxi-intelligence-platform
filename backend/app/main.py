@@ -16,6 +16,7 @@ from app.api.v1.snapshot import router as snapshot_router
 from app.api.v1.system import router as system_router
 from app.application.interfaces import (
     AIRPORT_SCHEDULER,
+    BUS_SCHEDULER,
     RAILWAY_SCHEDULER,
 )
 from app.core.logging import logger, setup_logging
@@ -24,9 +25,11 @@ from app.database.health import check_database
 from app.database.session import AsyncSessionLocal
 from app.schedulers import (
     AirportScheduler,
+    BusScheduler,
     RailwayScheduler,
     SchedulerRegistry,
     collect_and_persist_airport_signal,
+    collect_and_persist_bus_signal,
     collect_and_persist_railway_signal,
 )
 from app.services.postgres_scheduler_run_recorder import (
@@ -52,13 +55,15 @@ async def lifespan(app: FastAPI):
     else:
         logger.error("✗ PostgreSQL connection failed")
 
-    app.state.airport_scheduler = None
-
     scheduler_registry = SchedulerRegistry()
 
     scheduler_registry.register(
         identity=AIRPORT_SCHEDULER,
         enabled=settings.airport_scheduler_enabled,
+    )
+    scheduler_registry.register(
+        identity=BUS_SCHEDULER,
+        enabled=settings.bus_scheduler_enabled,
     )
     scheduler_registry.register(
         identity=RAILWAY_SCHEDULER,
@@ -67,6 +72,7 @@ async def lifespan(app: FastAPI):
 
     app.state.scheduler_registry = scheduler_registry
     app.state.airport_scheduler = None
+    app.state.bus_scheduler = None
     app.state.railway_scheduler = None
 
     run_recorder = PostgresSchedulerRunRecorder(
@@ -74,6 +80,7 @@ async def lifespan(app: FastAPI):
     )
 
     airport_scheduler: AirportScheduler | None = None
+    bus_scheduler: BusScheduler | None = None
     railway_scheduler: RailwayScheduler | None = None
 
     if settings.airport_scheduler_enabled and database_ok:
@@ -100,6 +107,32 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning(
             "Airport scheduler was not started because PostgreSQL is unavailable"
+        )
+
+    if settings.bus_scheduler_enabled and database_ok:
+        bus_scheduler = BusScheduler(
+            job=collect_and_persist_bus_signal,
+            interval_seconds=(settings.bus_scheduler_interval_seconds),
+            run_on_startup=(settings.bus_scheduler_run_on_startup),
+            max_attempts=(settings.bus_scheduler_max_attempts),
+            retry_backoff_seconds=(settings.bus_scheduler_retry_backoff_seconds),
+            run_recorder=run_recorder,
+        )
+
+        await bus_scheduler.start()
+
+        scheduler_registry.attach_runtime(
+            scheduler_key=BUS_SCHEDULER.key,
+            runtime=bus_scheduler,
+        )
+
+        app.state.bus_scheduler = bus_scheduler
+
+    elif not settings.bus_scheduler_enabled:
+        logger.info("Bus scheduler is disabled")
+    else:
+        logger.warning(
+            "Bus scheduler was not started because PostgreSQL is unavailable"
         )
 
     if settings.railway_scheduler_enabled and database_ok:
@@ -136,13 +169,18 @@ async def lifespan(app: FastAPI):
         if railway_scheduler is not None:
             await railway_scheduler.stop()
 
+        if bus_scheduler is not None:
+            await bus_scheduler.stop()
+
         if airport_scheduler is not None:
             await airport_scheduler.stop()
 
         scheduler_registry.detach_runtime(RAILWAY_SCHEDULER.key)
+        scheduler_registry.detach_runtime(BUS_SCHEDULER.key)
         scheduler_registry.detach_runtime(AIRPORT_SCHEDULER.key)
 
         app.state.railway_scheduler = None
+        app.state.bus_scheduler = None
         app.state.airport_scheduler = None
         app.state.scheduler_registry = None
 

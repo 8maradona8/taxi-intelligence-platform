@@ -2,6 +2,7 @@ import pytest
 
 from app.application.interfaces import (
     AIRPORT_SCHEDULER,
+    BUS_SCHEDULER,
     RAILWAY_SCHEDULER,
     SchedulerIdentity,
 )
@@ -42,6 +43,11 @@ def test_scheduler_identity_rejects_empty_name() -> None:
 def test_airport_scheduler_identity_is_stable() -> None:
     assert AIRPORT_SCHEDULER.key == "airport"
     assert AIRPORT_SCHEDULER.name == ("airport-signal-scheduler")
+
+
+def test_bus_scheduler_identity_is_stable() -> None:
+    assert BUS_SCHEDULER.key == "bus"
+    assert BUS_SCHEDULER.name == ("bus-signal-scheduler")
 
 
 def test_railway_scheduler_identity_is_stable() -> None:

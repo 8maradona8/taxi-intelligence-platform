@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, Request, status
 
 from app.application.interfaces import (
     AIRPORT_SCHEDULER,
+    BUS_SCHEDULER,
     RAILWAY_SCHEDULER,
     SchedulerConfiguration,
     SchedulerIdentity,
@@ -66,7 +67,10 @@ def get_scheduler_runtime(
         )
 
         if legacy_scheduler is not None:
-            return cast(SchedulerRuntime, legacy_scheduler)
+            return cast(
+                SchedulerRuntime,
+                legacy_scheduler,
+            )
 
     registry = get_scheduler_registry(request)
 
@@ -91,15 +95,8 @@ def get_scheduler_configuration(
         )
 
         if legacy_scheduler is not None:
-            return SchedulerConfiguration(
+            return _airport_configuration(
                 identity=AIRPORT_SCHEDULER,
-                enabled=settings.airport_scheduler_enabled,
-                interval_seconds=settings.airport_scheduler_interval_seconds,
-                run_on_startup=settings.airport_scheduler_run_on_startup,
-                max_attempts=settings.airport_scheduler_max_attempts,
-                retry_backoff_seconds=(
-                    settings.airport_scheduler_retry_backoff_seconds
-                ),
             )
 
     registry = get_scheduler_registry(request)
@@ -112,29 +109,68 @@ def get_scheduler_configuration(
             detail=f"Unknown scheduler: {scheduler_key}",
         ) from exc
 
-    if registration.identity.key == AIRPORT_SCHEDULER.key:
-        return SchedulerConfiguration(
-            identity=registration.identity,
-            enabled=settings.airport_scheduler_enabled,
-            interval_seconds=settings.airport_scheduler_interval_seconds,
-            run_on_startup=settings.airport_scheduler_run_on_startup,
-            max_attempts=settings.airport_scheduler_max_attempts,
-            retry_backoff_seconds=(settings.airport_scheduler_retry_backoff_seconds),
+    identity = registration.identity
+
+    if identity.key == AIRPORT_SCHEDULER.key:
+        return _airport_configuration(
+            identity=identity,
         )
 
-    if registration.identity.key == RAILWAY_SCHEDULER.key:
-        return SchedulerConfiguration(
-            identity=registration.identity,
-            enabled=settings.railway_scheduler_enabled,
-            interval_seconds=settings.railway_scheduler_interval_seconds,
-            run_on_startup=settings.railway_scheduler_run_on_startup,
-            max_attempts=settings.railway_scheduler_max_attempts,
-            retry_backoff_seconds=(settings.railway_scheduler_retry_backoff_seconds),
+    if identity.key == BUS_SCHEDULER.key:
+        return _bus_configuration(
+            identity=identity,
+        )
+
+    if identity.key == RAILWAY_SCHEDULER.key:
+        return _railway_configuration(
+            identity=identity,
         )
 
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=(f"Scheduler configuration is missing: {registration.identity.key}"),
+        detail=(f"Scheduler configuration is missing: {identity.key}"),
+    )
+
+
+def _airport_configuration(
+    *,
+    identity: SchedulerIdentity,
+) -> SchedulerConfiguration:
+    return SchedulerConfiguration(
+        identity=identity,
+        enabled=settings.airport_scheduler_enabled,
+        interval_seconds=(settings.airport_scheduler_interval_seconds),
+        run_on_startup=(settings.airport_scheduler_run_on_startup),
+        max_attempts=(settings.airport_scheduler_max_attempts),
+        retry_backoff_seconds=(settings.airport_scheduler_retry_backoff_seconds),
+    )
+
+
+def _bus_configuration(
+    *,
+    identity: SchedulerIdentity,
+) -> SchedulerConfiguration:
+    return SchedulerConfiguration(
+        identity=identity,
+        enabled=settings.bus_scheduler_enabled,
+        interval_seconds=(settings.bus_scheduler_interval_seconds),
+        run_on_startup=(settings.bus_scheduler_run_on_startup),
+        max_attempts=(settings.bus_scheduler_max_attempts),
+        retry_backoff_seconds=(settings.bus_scheduler_retry_backoff_seconds),
+    )
+
+
+def _railway_configuration(
+    *,
+    identity: SchedulerIdentity,
+) -> SchedulerConfiguration:
+    return SchedulerConfiguration(
+        identity=identity,
+        enabled=settings.railway_scheduler_enabled,
+        interval_seconds=(settings.railway_scheduler_interval_seconds),
+        run_on_startup=(settings.railway_scheduler_run_on_startup),
+        max_attempts=(settings.railway_scheduler_max_attempts),
+        retry_backoff_seconds=(settings.railway_scheduler_retry_backoff_seconds),
     )
 
 
@@ -148,7 +184,10 @@ def get_airport_scheduler(
     )
 
     if legacy_scheduler is not None:
-        return cast(AirportScheduler, legacy_scheduler)
+        return cast(
+            AirportScheduler,
+            legacy_scheduler,
+        )
 
     registry = getattr(
         request.app.state,
@@ -164,4 +203,7 @@ def get_airport_scheduler(
     except KeyError:
         return None
 
-    return cast(AirportScheduler | None, runtime)
+    return cast(
+        AirportScheduler | None,
+        runtime,
+    )

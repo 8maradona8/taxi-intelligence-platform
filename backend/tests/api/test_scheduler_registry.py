@@ -1,25 +1,37 @@
+from datetime import UTC, datetime
+
 from fastapi.testclient import TestClient
 
 from app.application.interfaces import (
     AIRPORT_SCHEDULER,
+    BUS_SCHEDULER,
     RAILWAY_SCHEDULER,
 )
 from app.main import app
-from datetime import UTC, datetime
-
 from app.schedulers import (
     AirportSchedulerStatus,
     SchedulerRegistry,
 )
 
 
-class FakeAirportRuntime:
+class FakeSchedulerRuntime:
+    def __init__(
+        self,
+        *,
+        name: str,
+        impact_score: float,
+        arrivals: int,
+    ) -> None:
+        self._name = name
+        self._impact_score = impact_score
+        self._arrivals = arrivals
+
     @property
     def status(self) -> AirportSchedulerStatus:
         now = datetime.now(UTC)
 
         return AirportSchedulerStatus(
-            name="airport-signal-scheduler",
+            name=self._name,
             running=True,
             interval_seconds=300,
             run_on_startup=True,
@@ -30,8 +42,8 @@ class FakeAirportRuntime:
             last_success_at=now,
             last_failure_at=None,
             last_error=None,
-            last_impact_score=24.0,
-            last_arrivals=2,
+            last_impact_score=self._impact_score,
+            last_arrivals=self._arrivals,
             runs_total=1,
             successes_total=1,
             failures_total=0,
@@ -58,13 +70,31 @@ def test_scheduler_registry_endpoint(
     registry.register(
         identity=AIRPORT_SCHEDULER,
         enabled=True,
-        runtime=FakeAirportRuntime(),
+        runtime=FakeSchedulerRuntime(
+            name="airport-signal-scheduler",
+            impact_score=24.0,
+            arrivals=2,
+        ),
+    )
+
+    registry.register(
+        identity=BUS_SCHEDULER,
+        enabled=True,
+        runtime=FakeSchedulerRuntime(
+            name="bus-signal-scheduler",
+            impact_score=38.0,
+            arrivals=3,
+        ),
     )
 
     registry.register(
         identity=RAILWAY_SCHEDULER,
         enabled=True,
-        runtime=FakeAirportRuntime(),
+        runtime=FakeSchedulerRuntime(
+            name="railway-signal-scheduler",
+            impact_score=100.0,
+            arrivals=8,
+        ),
     )
 
     app.state.scheduler_registry = registry
@@ -78,15 +108,39 @@ def test_scheduler_registry_endpoint(
 
     data = response.json()
 
-    assert data["count"] == 2
+    assert data["count"] == 3
 
-    scheduler = data["schedulers"][0]
+    schedulers = {scheduler["key"]: scheduler for scheduler in data["schedulers"]}
 
-    assert scheduler["key"] == "airport"
-    assert scheduler["name"] == ("airport-signal-scheduler")
-    assert scheduler["enabled"] is True
-    assert scheduler["initialized"] is True
-    assert scheduler["running"] is True
+    assert set(schedulers) == {
+        "airport",
+        "bus",
+        "railway",
+    }
+
+    assert schedulers["airport"] == {
+        "key": "airport",
+        "name": "airport-signal-scheduler",
+        "enabled": True,
+        "initialized": True,
+        "running": True,
+    }
+
+    assert schedulers["bus"] == {
+        "key": "bus",
+        "name": "bus-signal-scheduler",
+        "enabled": True,
+        "initialized": True,
+        "running": True,
+    }
+
+    assert schedulers["railway"] == {
+        "key": "railway",
+        "name": "railway-signal-scheduler",
+        "enabled": True,
+        "initialized": True,
+        "running": True,
+    }
 
 
 def test_airport_status_keeps_legacy_app_state_support(
@@ -104,7 +158,11 @@ def test_airport_status_keeps_legacy_app_state_support(
     )
 
     app.state.scheduler_registry = None
-    app.state.airport_scheduler = FakeAirportRuntime()
+    app.state.airport_scheduler = FakeSchedulerRuntime(
+        name="airport-signal-scheduler",
+        impact_score=24.0,
+        arrivals=2,
+    )
 
     try:
         response = api_client.get("/api/v1/system/schedulers/airport")
