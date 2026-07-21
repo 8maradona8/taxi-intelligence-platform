@@ -10,10 +10,14 @@ from app.infrastructure.mappers.railway import (
     RailwaySignalMapper,
     SofiaRailwayArrivalParser,
 )
+from app.infrastructure.mappers.weather import (
+    MetNorwayForecastParser,
+)
 
 __all__ = [
     "AirportSignalMapper",
     "BusSignalMapper",
+    "MetNorwayForecastParser",
     "RailwaySignalMapper",
     "SofiaAirportFlightParser",
     "SofiaCentralBusArrivalParser",

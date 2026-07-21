@@ -7,9 +7,13 @@ from app.infrastructure.clients.bus import (
 from app.infrastructure.clients.railway import (
     BdzLiveBoardClient,
 )
+from app.infrastructure.clients.weather import (
+    MetNorwayWeatherClient,
+)
 
 __all__ = [
     "BdzLiveBoardClient",
+    "MetNorwayWeatherClient",
     "SofiaAirportWebsiteClient",
     "SofiaCentralBusStationClient",
 ]
