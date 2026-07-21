@@ -119,9 +119,7 @@ async def scheduler_status(
             retry_backoff_seconds=configuration.retry_backoff_seconds,
         )
     else:
-        response = SchedulerStatusResponse.from_status(
-            scheduler.status
-        )
+        response = SchedulerStatusResponse.from_status(scheduler.status)
 
     return asdict(response)
 
