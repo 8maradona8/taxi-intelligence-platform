@@ -3,6 +3,7 @@ from app.infrastructure.mappers.airport import (
     SofiaAirportFlightParser,
 )
 from app.infrastructure.mappers.bus import (
+    BusSignalMapper,
     SofiaCentralBusArrivalParser,
 )
 from app.infrastructure.mappers.railway import (
@@ -12,6 +13,7 @@ from app.infrastructure.mappers.railway import (
 
 __all__ = [
     "AirportSignalMapper",
+    "BusSignalMapper",
     "RailwaySignalMapper",
     "SofiaAirportFlightParser",
     "SofiaCentralBusArrivalParser",
