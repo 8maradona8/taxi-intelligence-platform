@@ -12,6 +12,7 @@ from app.application.interfaces.scheduler_identities import (
     AIRPORT_SCHEDULER,
     BUS_SCHEDULER,
     RAILWAY_SCHEDULER,
+    WEATHER_SCHEDULER,
 )
 from app.application.interfaces.scheduler_identity import (
     SchedulerIdentity,
@@ -46,6 +47,7 @@ __all__ = [
     "AIRPORT_SCHEDULER",
     "BUS_SCHEDULER",
     "RAILWAY_SCHEDULER",
+    "WEATHER_SCHEDULER",
     "AirportSignalReader",
     "SchedulerConfiguration",
     "SchedulerFailureBreakdown",

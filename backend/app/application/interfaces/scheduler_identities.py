@@ -17,3 +17,8 @@ RAILWAY_SCHEDULER = SchedulerIdentity(
     key="railway",
     name="railway-signal-scheduler",
 )
+
+WEATHER_SCHEDULER = SchedulerIdentity(
+    key="weather",
+    name="weather-signal-scheduler",
+)

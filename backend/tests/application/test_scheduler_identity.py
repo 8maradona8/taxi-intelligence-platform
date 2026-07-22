@@ -53,3 +53,10 @@ def test_bus_scheduler_identity_is_stable() -> None:
 def test_railway_scheduler_identity_is_stable() -> None:
     assert RAILWAY_SCHEDULER.key == "railway"
     assert RAILWAY_SCHEDULER.name == ("railway-signal-scheduler")
+
+
+def test_weather_scheduler_identity_is_normalized() -> None:
+    from app.application.interfaces import WEATHER_SCHEDULER
+
+    assert WEATHER_SCHEDULER.key == "weather"
+    assert WEATHER_SCHEDULER.name == ("weather-signal-scheduler")

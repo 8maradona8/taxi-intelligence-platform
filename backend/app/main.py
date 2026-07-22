@@ -18,6 +18,7 @@ from app.application.interfaces import (
     AIRPORT_SCHEDULER,
     BUS_SCHEDULER,
     RAILWAY_SCHEDULER,
+    WEATHER_SCHEDULER,
 )
 from app.core.logging import logger, setup_logging
 from app.core.settings import settings
@@ -28,9 +29,11 @@ from app.schedulers import (
     BusScheduler,
     RailwayScheduler,
     SchedulerRegistry,
+    WeatherScheduler,
     collect_and_persist_airport_signal,
     collect_and_persist_bus_signal,
     collect_and_persist_railway_signal,
+    collect_and_persist_weather_signal,
 )
 from app.services.postgres_scheduler_run_recorder import (
     PostgresSchedulerRunRecorder,
@@ -69,11 +72,16 @@ async def lifespan(app: FastAPI):
         identity=RAILWAY_SCHEDULER,
         enabled=settings.railway_scheduler_enabled,
     )
+    scheduler_registry.register(
+        identity=WEATHER_SCHEDULER,
+        enabled=settings.weather_scheduler_enabled,
+    )
 
     app.state.scheduler_registry = scheduler_registry
     app.state.airport_scheduler = None
     app.state.bus_scheduler = None
     app.state.railway_scheduler = None
+    app.state.weather_scheduler = None
 
     run_recorder = PostgresSchedulerRunRecorder(
         session_factory=AsyncSessionLocal,
@@ -82,6 +90,7 @@ async def lifespan(app: FastAPI):
     airport_scheduler: AirportScheduler | None = None
     bus_scheduler: BusScheduler | None = None
     railway_scheduler: RailwayScheduler | None = None
+    weather_scheduler: WeatherScheduler | None = None
 
     if settings.airport_scheduler_enabled and database_ok:
         airport_scheduler = AirportScheduler(
@@ -114,7 +123,7 @@ async def lifespan(app: FastAPI):
             job=collect_and_persist_bus_signal,
             interval_seconds=(settings.bus_scheduler_interval_seconds),
             run_on_startup=(settings.bus_scheduler_run_on_startup),
-            max_attempts=(settings.bus_scheduler_max_attempts),
+            max_attempts=settings.bus_scheduler_max_attempts,
             retry_backoff_seconds=(settings.bus_scheduler_retry_backoff_seconds),
             run_recorder=run_recorder,
         )
@@ -161,11 +170,40 @@ async def lifespan(app: FastAPI):
             "Railway scheduler was not started because PostgreSQL is unavailable"
         )
 
+    if settings.weather_scheduler_enabled and database_ok:
+        weather_scheduler = WeatherScheduler(
+            job=collect_and_persist_weather_signal,
+            interval_seconds=(settings.weather_scheduler_interval_seconds),
+            run_on_startup=(settings.weather_scheduler_run_on_startup),
+            max_attempts=(settings.weather_scheduler_max_attempts),
+            retry_backoff_seconds=(settings.weather_scheduler_retry_backoff_seconds),
+            run_recorder=run_recorder,
+        )
+
+        await weather_scheduler.start()
+
+        scheduler_registry.attach_runtime(
+            scheduler_key=WEATHER_SCHEDULER.key,
+            runtime=weather_scheduler,
+        )
+
+        app.state.weather_scheduler = weather_scheduler
+
+    elif not settings.weather_scheduler_enabled:
+        logger.info("Weather scheduler is disabled")
+    else:
+        logger.warning(
+            "Weather scheduler was not started because PostgreSQL is unavailable"
+        )
+
     logger.info("Backend is ready.")
 
     try:
         yield
     finally:
+        if weather_scheduler is not None:
+            await weather_scheduler.stop()
+
         if railway_scheduler is not None:
             await railway_scheduler.stop()
 
@@ -175,10 +213,12 @@ async def lifespan(app: FastAPI):
         if airport_scheduler is not None:
             await airport_scheduler.stop()
 
+        scheduler_registry.detach_runtime(WEATHER_SCHEDULER.key)
         scheduler_registry.detach_runtime(RAILWAY_SCHEDULER.key)
         scheduler_registry.detach_runtime(BUS_SCHEDULER.key)
         scheduler_registry.detach_runtime(AIRPORT_SCHEDULER.key)
 
+        app.state.weather_scheduler = None
         app.state.railway_scheduler = None
         app.state.bus_scheduler = None
         app.state.airport_scheduler = None

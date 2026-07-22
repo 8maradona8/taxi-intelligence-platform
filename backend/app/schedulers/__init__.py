@@ -27,6 +27,13 @@ from app.schedulers.scheduler_registry import (
     SchedulerRegistration,
     SchedulerRegistry,
 )
+from app.schedulers.weather_job import (
+    collect_and_persist_weather_signal,
+)
+from app.schedulers.weather_scheduler import (
+    WeatherScheduler,
+    WeatherSchedulerStatus,
+)
 
 __all__ = [
     "AirportScheduler",
@@ -39,7 +46,10 @@ __all__ = [
     "RailwaySchedulerStatus",
     "SchedulerRegistration",
     "SchedulerRegistry",
+    "WeatherScheduler",
+    "WeatherSchedulerStatus",
     "collect_and_persist_airport_signal",
     "collect_and_persist_bus_signal",
     "collect_and_persist_railway_signal",
+    "collect_and_persist_weather_signal",
 ]

@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     weather_api_key: str | None = None
     events_api_key: str | None = None
 
+    weather_user_agent: str = (
+        "Taxi-Intelligence-Platform/0.1.0 (contact: configure-WEATHER_USER_AGENT)"
+    )
+
     airport_scheduler_enabled: bool = True
     airport_scheduler_interval_seconds: int = 300
     airport_scheduler_run_on_startup: bool = True
@@ -40,6 +44,12 @@ class Settings(BaseSettings):
     bus_scheduler_retry_backoff_seconds: float = 2.0
 
     bus_arrivals_horizon_hours: int = 2
+
+    weather_scheduler_enabled: bool = True
+    weather_scheduler_interval_seconds: int = 900
+    weather_scheduler_run_on_startup: bool = True
+    weather_scheduler_max_attempts: int = 2
+    weather_scheduler_retry_backoff_seconds: float = 2.0
 
     model_config = SettingsConfigDict(
         env_file="../.env",

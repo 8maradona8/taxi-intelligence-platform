@@ -12,6 +12,7 @@ from app.infrastructure.mappers.railway import (
 )
 from app.infrastructure.mappers.weather import (
     MetNorwayForecastParser,
+    WeatherSignalMapper,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "SofiaAirportFlightParser",
     "SofiaCentralBusArrivalParser",
     "SofiaRailwayArrivalParser",
+    "WeatherSignalMapper",
 ]
