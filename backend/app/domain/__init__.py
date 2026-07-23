@@ -10,13 +10,19 @@ from app.domain.scoring import (
 )
 from app.domain.train_arrival import TrainArrival
 from app.domain.train_status import TrainStatus
-from app.domain.weather_forecast import WeatherForecast
+from app.domain.weather import (
+    PrecipitationType,
+    WeatherCondition,
+    WeatherForecast,
+    WeatherSnapshot,
+)
 
 
 __all__ = [
     "BusArrival",
     "Flight",
     "FlightStatus",
+    "PrecipitationType",
     "ScoreAssessment",
     "ScoreContext",
     "ScoreContribution",
@@ -24,5 +30,7 @@ __all__ = [
     "ScoreReason",
     "TrainArrival",
     "TrainStatus",
+    "WeatherCondition",
     "WeatherForecast",
+    "WeatherSnapshot",
 ]

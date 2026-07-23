@@ -1,6 +1,9 @@
 from datetime import UTC, datetime, timedelta
 
-from app.domain import WeatherForecast
+from app.domain.weather import (
+    WeatherForecast,
+    WeatherSnapshot,
+)
 from app.domain.enums import (
     PriorityLevel,
     SignalSource,
@@ -42,41 +45,31 @@ class WeatherSignalMapper:
         *,
         observed_at: datetime | None = None,
     ) -> SignalEvent:
-        if not forecasts:
-            raise ValueError("forecasts cannot be empty")
-
-        observation_time = self._normalize_observed_at(observed_at or datetime.now(UTC))
-
-        ordered_forecasts = sorted(
-            forecasts,
-            key=lambda forecast: forecast.forecast_at,
+        snapshot = WeatherSnapshot.create(
+            location=self._zone_name,
+            provider="met-norway",
+            observed_at=observed_at or datetime.now(UTC),
+            forecasts=forecasts,
         )
 
-        current_forecast = self._select_current_forecast(
-            ordered_forecasts,
-            observed_at=observation_time,
-        )
-
-        relevant_forecasts = self._select_relevant_forecasts(
-            ordered_forecasts,
-            observed_at=observation_time,
-        )
+        current_forecast = snapshot.current_forecast
+        relevant_forecasts = snapshot.forecasts_within(self._forecast_window)
 
         if not relevant_forecasts:
-            relevant_forecasts = [current_forecast]
+            relevant_forecasts = (current_forecast,)
 
         return SignalEvent(
             source=SignalSource.WEATHER,
             signal_type=SignalType.WEATHER_CONDITION,
-            zone_name=self._zone_name,
+            zone_name=snapshot.location,
             impact_score=ImpactScore(0.0),
             confidence=Confidence(0.95),
             priority=PriorityLevel.LOW,
-            observed_at=observation_time,
+            observed_at=snapshot.observed_at,
             ttl=self._signal_ttl,
             payload={
-                "provider": "met-norway",
-                "location": self._zone_name,
+                "provider": snapshot.provider,
+                "location": snapshot.location,
                 "arrivals": 0,
                 "demand_impact_scored": False,
                 "scoring_version": "raw-weather-v1",
@@ -84,44 +77,13 @@ class WeatherSignalMapper:
                     self._forecast_window.total_seconds() / 60
                 ),
                 "forecast_count": len(relevant_forecasts),
-                "current": self._serialize_forecast(
-                    current_forecast,
-                ),
+                "current": self._serialize_forecast(current_forecast),
                 "forecasts": [
                     self._serialize_forecast(forecast)
                     for forecast in relevant_forecasts
                 ],
             },
         )
-
-    def _select_current_forecast(
-        self,
-        forecasts: list[WeatherForecast],
-        *,
-        observed_at: datetime,
-    ) -> WeatherForecast:
-        future_forecasts = [
-            forecast for forecast in forecasts if forecast.forecast_at >= observed_at
-        ]
-
-        if future_forecasts:
-            return future_forecasts[0]
-
-        return forecasts[-1]
-
-    def _select_relevant_forecasts(
-        self,
-        forecasts: list[WeatherForecast],
-        *,
-        observed_at: datetime,
-    ) -> list[WeatherForecast]:
-        window_end = observed_at + self._forecast_window
-
-        return [
-            forecast
-            for forecast in forecasts
-            if observed_at <= forecast.forecast_at <= window_end
-        ]
 
     @staticmethod
     def _serialize_forecast(
@@ -138,12 +100,3 @@ class WeatherSignalMapper:
             "precipitation_amount_mm": (forecast.precipitation_amount_mm),
             "symbol_code": forecast.symbol_code,
         }
-
-    @staticmethod
-    def _normalize_observed_at(
-        observed_at: datetime,
-    ) -> datetime:
-        if observed_at.tzinfo is None:
-            return observed_at.replace(tzinfo=UTC)
-
-        return observed_at.astimezone(UTC)

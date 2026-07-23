@@ -3,7 +3,11 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.domain import WeatherForecast
+from app.domain import (
+    PrecipitationType,
+    WeatherCondition,
+    WeatherForecast,
+)
 
 
 def make_forecast(
@@ -56,6 +60,35 @@ def test_weather_forecast_is_immutable() -> None:
         forecast.symbol_code = "rain"  # type: ignore[misc]
 
 
+def test_weather_forecast_exposes_condition() -> None:
+    forecast = make_forecast(
+        symbol_code="rainshowers_day",
+        precipitation_amount_mm=1.5,
+    )
+
+    assert forecast.condition == WeatherCondition.RAIN
+
+
+def test_weather_forecast_exposes_precipitation_type() -> None:
+    forecast = make_forecast(
+        symbol_code="snow",
+        precipitation_amount_mm=2.0,
+    )
+
+    assert forecast.precipitation_type == PrecipitationType.SNOW
+
+
+def test_weather_forecast_detects_precipitation() -> None:
+    dry_forecast = make_forecast()
+    wet_forecast = make_forecast(
+        symbol_code="rain",
+        precipitation_amount_mm=0.1,
+    )
+
+    assert dry_forecast.has_precipitation is False
+    assert wet_forecast.has_precipitation is True
+
+
 def test_weather_forecast_rejects_naive_datetime() -> None:
     with pytest.raises(
         ValueError,
@@ -99,3 +132,11 @@ def test_weather_forecast_rejects_invalid_values(
                 field_name: value,
             }
         )
+
+
+def test_legacy_weather_forecast_import_is_compatible() -> None:
+    from app.domain.weather_forecast import (  # noqa: PLC0415
+        WeatherForecast as LegacyWeatherForecast,
+    )
+
+    assert LegacyWeatherForecast is WeatherForecast
