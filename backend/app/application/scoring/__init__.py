@@ -7,10 +7,14 @@ from app.application.scoring.contributor import (
 from app.application.scoring.score_engine import (
     ScoreEngine,
 )
+from app.application.scoring.weighted_score_aggregator import (
+    WeightedScoreAggregator,
+)
 
 
 __all__ = [
     "ScoreAggregator",
     "ScoreContributor",
     "ScoreEngine",
+    "WeightedScoreAggregator",
 ]
