@@ -1,8 +1,8 @@
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from app.domain.weather import (
-    WeatherForecast,
-    WeatherSnapshot,
+from app.application.scoring.weather import (
+    WeatherScoreService,
 )
 from app.domain.enums import (
     PriorityLevel,
@@ -10,19 +10,31 @@ from app.domain.enums import (
     SignalType,
 )
 from app.domain.events import SignalEvent
+from app.domain.scoring import (
+    ScoreAssessment,
+    ScoreLevel,
+)
 from app.domain.value_objects import (
     Confidence,
     ImpactScore,
 )
+from app.domain.weather import (
+    WeatherForecast,
+    WeatherSnapshot,
+)
 
 
 class WeatherSignalMapper:
+    RAW_SCORING_VERSION = "raw-weather-v1"
+    DEMAND_SCORING_VERSION = "weather-demand-v1"
+
     def __init__(
         self,
         *,
         zone_name: str = "Sofia",
         forecast_window: timedelta = timedelta(hours=6),
         signal_ttl: timedelta = timedelta(minutes=30),
+        score_service: WeatherScoreService | None = None,
     ) -> None:
         normalized_zone_name = zone_name.strip()
 
@@ -38,6 +50,7 @@ class WeatherSignalMapper:
         self._zone_name = normalized_zone_name
         self._forecast_window = forecast_window
         self._signal_ttl = signal_ttl
+        self._score_service = score_service
 
     def map_forecasts(
         self,
@@ -53,11 +66,49 @@ class WeatherSignalMapper:
         )
 
         current_forecast = snapshot.current_forecast
-        relevant_forecasts = snapshot.forecasts_within(self._forecast_window)
+        relevant_forecasts = snapshot.forecasts_within(
+            self._forecast_window,
+        )
 
         if not relevant_forecasts:
             relevant_forecasts = (current_forecast,)
 
+        base_payload: dict[str, Any] = {
+            "provider": snapshot.provider,
+            "location": snapshot.location,
+            "arrivals": 0,
+            "forecast_window_minutes": int(self._forecast_window.total_seconds() / 60),
+            "forecast_count": len(relevant_forecasts),
+            "current": self._serialize_forecast(
+                current_forecast,
+            ),
+            "forecasts": [
+                self._serialize_forecast(forecast) for forecast in relevant_forecasts
+            ],
+        }
+
+        if self._score_service is None:
+            return self._create_raw_signal(
+                snapshot=snapshot,
+                payload=base_payload,
+            )
+
+        assessment = self._score_service.assess_snapshot(
+            snapshot,
+        )
+
+        return self._create_scored_signal(
+            snapshot=snapshot,
+            assessment=assessment,
+            payload=base_payload,
+        )
+
+    def _create_raw_signal(
+        self,
+        *,
+        snapshot: WeatherSnapshot,
+        payload: dict[str, Any],
+    ) -> SignalEvent:
         return SignalEvent(
             source=SignalSource.WEATHER,
             signal_type=SignalType.WEATHER_CONDITION,
@@ -68,22 +119,88 @@ class WeatherSignalMapper:
             observed_at=snapshot.observed_at,
             ttl=self._signal_ttl,
             payload={
-                "provider": snapshot.provider,
-                "location": snapshot.location,
-                "arrivals": 0,
+                **payload,
                 "demand_impact_scored": False,
-                "scoring_version": "raw-weather-v1",
-                "forecast_window_minutes": int(
-                    self._forecast_window.total_seconds() / 60
-                ),
-                "forecast_count": len(relevant_forecasts),
-                "current": self._serialize_forecast(current_forecast),
-                "forecasts": [
-                    self._serialize_forecast(forecast)
-                    for forecast in relevant_forecasts
-                ],
+                "scoring_version": self.RAW_SCORING_VERSION,
             },
         )
+
+    def _create_scored_signal(
+        self,
+        *,
+        snapshot: WeatherSnapshot,
+        assessment: ScoreAssessment,
+        payload: dict[str, Any],
+    ) -> SignalEvent:
+        return SignalEvent(
+            source=SignalSource.WEATHER,
+            signal_type=SignalType.WEATHER_CONDITION,
+            zone_name=snapshot.location,
+            impact_score=ImpactScore(
+                assessment.score,
+            ),
+            confidence=Confidence(
+                assessment.confidence,
+            ),
+            priority=self._priority_from_level(
+                assessment.level,
+            ),
+            observed_at=snapshot.observed_at,
+            ttl=self._signal_ttl,
+            payload={
+                **payload,
+                "demand_impact_scored": True,
+                "scoring_version": self.DEMAND_SCORING_VERSION,
+                "scoring": self._serialize_assessment(
+                    assessment,
+                ),
+            },
+        )
+
+    @staticmethod
+    def _priority_from_level(
+        level: ScoreLevel,
+    ) -> PriorityLevel:
+        priority_by_level = {
+            ScoreLevel.VERY_LOW: PriorityLevel.LOW,
+            ScoreLevel.LOW: PriorityLevel.LOW,
+            ScoreLevel.MEDIUM: PriorityLevel.MEDIUM,
+            ScoreLevel.HIGH: PriorityLevel.HIGH,
+            ScoreLevel.VERY_HIGH: PriorityLevel.CRITICAL,
+        }
+
+        return priority_by_level[level]
+
+    @staticmethod
+    def _serialize_assessment(
+        assessment: ScoreAssessment,
+    ) -> dict[str, Any]:
+        return {
+            "score": assessment.score,
+            "confidence": assessment.confidence,
+            "level": assessment.level.value,
+            "contributors": [
+                {
+                    "name": contribution.contributor,
+                    "score": contribution.score,
+                    "weight": contribution.weight,
+                    "confidence": contribution.confidence,
+                    "weighted_score": (contribution.weighted_score),
+                    "reason_code": contribution.reason.code,
+                }
+                for contribution in assessment.contributions
+            ],
+            "reasons": [
+                {
+                    "code": reason.code,
+                    "description": reason.description,
+                    "contribution": reason.contribution,
+                    "metadata": dict(reason.metadata),
+                }
+                for reason in assessment.reasons
+            ],
+            "metadata": dict(assessment.metadata),
+        }
 
     @staticmethod
     def _serialize_forecast(

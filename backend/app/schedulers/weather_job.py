@@ -1,3 +1,6 @@
+from app.application.scoring.weather import (
+    WeatherScoreService,
+)
 from app.core.settings import settings
 from app.database.session import AsyncSessionLocal
 from app.domain.events import SignalEvent
@@ -50,7 +53,9 @@ async def collect_and_persist_weather_signal() -> SignalEvent:
 
             service = WeatherSignalService(
                 collector=collector,
-                signal_mapper=WeatherSignalMapper(),
+                signal_mapper=WeatherSignalMapper(
+                    score_service=WeatherScoreService(),
+                ),
                 persistence_service=persistence_service,
             )
 
