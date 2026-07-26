@@ -4,9 +4,13 @@ from app.application.demand_fusion.demand_source_weight_registry import (
 from app.application.demand_fusion.demand_weight_normalizer import (
     DemandWeightNormalizer,
 )
+from app.application.demand_fusion.zone_signal_grouper import (
+    ZoneSignalGrouper,
+)
 
 
 __all__ = [
     "DemandSourceWeightRegistry",
     "DemandWeightNormalizer",
+    "ZoneSignalGrouper",
 ]

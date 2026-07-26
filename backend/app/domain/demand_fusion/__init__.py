@@ -10,6 +10,9 @@ from app.domain.demand_fusion.demand_source_assessment import (
 from app.domain.demand_fusion.demand_source_weight import (
     DemandSourceWeight,
 )
+from app.domain.demand_fusion.zone_signal_group import (
+    ZoneSignalGroup,
+)
 
 
 __all__ = [
@@ -17,4 +20,5 @@ __all__ = [
     "DemandSignalInput",
     "DemandSourceAssessment",
     "DemandSourceWeight",
+    "ZoneSignalGroup",
 ]
