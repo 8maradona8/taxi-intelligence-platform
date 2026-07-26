@@ -1,0 +1,89 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Ruff and Pytest
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      ENVIRONMENT: development
+      APP_NAME: Taxi Intelligence Platform
+      APP_VERSION: 0.1.0
+      HOST: 0.0.0.0
+      PORT: 8000
+      DATABASE_URL: postgresql+asyncpg://tip:tip@localhost:5432/tip
+      REDIS_URL: redis://localhost:6379
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tip
+          POSTGRES_PASSWORD: tip
+          POSTGRES_DB: tip
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tip -d tip"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: backend/.python-version
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.27"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked --all-groups
+
+      - name: Check formatting
+        run: uv run ruff format --check app tests
+
+      - name: Run Ruff
+        run: uv run ruff check app tests
+
+      - name: Run tests
+        run: uv run pytest -v
