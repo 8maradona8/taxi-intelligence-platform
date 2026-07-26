@@ -4,6 +4,9 @@ from app.application.demand_fusion.demand_source_weight_registry import (
 from app.application.demand_fusion.demand_weight_normalizer import (
     DemandWeightNormalizer,
 )
+from app.application.demand_fusion.zone_demand_fusion_engine import (
+    ZoneDemandFusionEngine,
+)
 from app.application.demand_fusion.zone_signal_grouper import (
     ZoneSignalGrouper,
 )
@@ -12,5 +15,6 @@ from app.application.demand_fusion.zone_signal_grouper import (
 __all__ = [
     "DemandSourceWeightRegistry",
     "DemandWeightNormalizer",
+    "ZoneDemandFusionEngine",
     "ZoneSignalGrouper",
 ]
