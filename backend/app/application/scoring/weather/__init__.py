@@ -8,6 +8,10 @@ from app.application.scoring.weather.precipitation_score_contributor import (
 from app.application.scoring.weather.temperature_score_contributor import (
     TemperatureScoreContributor,
 )
+from app.application.scoring.weather.weather_forecast_assessment import (
+    WeatherForecastAssessment,
+    WeatherForecastWindowAssessment,
+)
 from app.application.scoring.weather.weather_score_service import (
     WeatherScoreService,
 )
@@ -20,6 +24,8 @@ __all__ = [
     "PrecipitationScoreContributor",
     "TemperatureScoreContributor",
     "WEATHER_SNAPSHOT_ATTRIBUTE",
+    "WeatherForecastAssessment",
+    "WeatherForecastWindowAssessment",
     "WeatherScoreService",
     "WindScoreContributor",
     "require_weather_snapshot",

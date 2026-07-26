@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.application.scoring.weather import (
+    WeatherForecastWindowAssessment,
     WeatherScoreService,
 )
 from app.domain.enums import (
@@ -27,6 +28,7 @@ from app.domain.weather import (
 class WeatherSignalMapper:
     RAW_SCORING_VERSION = "raw-weather-v1"
     DEMAND_SCORING_VERSION = "weather-demand-v1"
+    FORECAST_SCORING_VERSION = "weather-forecast-window-v1"
 
     def __init__(
         self,
@@ -93,13 +95,16 @@ class WeatherSignalMapper:
                 payload=base_payload,
             )
 
-        assessment = self._score_service.assess_snapshot(
+        window_assessment = self._score_service.assess_forecast_window(
             snapshot,
+            window=self._forecast_window,
         )
+        peak_assessment = window_assessment.peak.assessment
 
         return self._create_scored_signal(
             snapshot=snapshot,
-            assessment=assessment,
+            assessment=peak_assessment,
+            window_assessment=window_assessment,
             payload=base_payload,
         )
 
@@ -130,6 +135,7 @@ class WeatherSignalMapper:
         *,
         snapshot: WeatherSnapshot,
         assessment: ScoreAssessment,
+        window_assessment: WeatherForecastWindowAssessment,
         payload: dict[str, Any],
     ) -> SignalEvent:
         return SignalEvent(
@@ -154,6 +160,11 @@ class WeatherSignalMapper:
                 "scoring": self._serialize_assessment(
                     assessment,
                 ),
+                "forecast_scoring": (
+                    self._serialize_window_assessment(
+                        window_assessment,
+                    )
+                ),
             },
         )
 
@@ -171,6 +182,31 @@ class WeatherSignalMapper:
 
         return priority_by_level[level]
 
+    @classmethod
+    def _serialize_window_assessment(
+        cls,
+        window_assessment: WeatherForecastWindowAssessment,
+    ) -> dict[str, Any]:
+        peak = window_assessment.peak
+
+        return {
+            "scoring_version": cls.FORECAST_SCORING_VERSION,
+            "window_minutes": window_assessment.window_minutes,
+            "forecast_count": window_assessment.forecast_count,
+            "peak_score": peak.assessment.score,
+            "peak_forecast_at": peak.forecast_at.isoformat(),
+            "assessments": [
+                {
+                    "forecast_at": item.forecast_at.isoformat(),
+                    "horizon_minutes": item.horizon_minutes,
+                    **cls._serialize_assessment(
+                        item.assessment,
+                    ),
+                }
+                for item in window_assessment.assessments
+            ],
+        }
+
     @staticmethod
     def _serialize_assessment(
         assessment: ScoreAssessment,
@@ -185,7 +221,7 @@ class WeatherSignalMapper:
                     "score": contribution.score,
                     "weight": contribution.weight,
                     "confidence": contribution.confidence,
-                    "weighted_score": (contribution.weighted_score),
+                    "weighted_score": contribution.weighted_score,
                     "reason_code": contribution.reason.code,
                 }
                 for contribution in assessment.contributions
